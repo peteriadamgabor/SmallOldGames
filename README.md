@@ -4,6 +4,10 @@ Retro mobile game remakes in Python with a Vulkan renderer.
 
 The first implemented game is `Sketch Hopper`, an endless vertical jumper inspired by early phone games. The long-term goal is a small collection of old mobile-style remakes running from one launcher.
 
+Repository automation:
+
+- GitHub Actions CI runs compile and unit-test checks on Linux and Windows for pushes to `main` and pull requests.
+
 ## Current Features
 
 - Launcher with game selection and local leaderboard entry point
@@ -284,6 +288,8 @@ Install dependencies:
 ```bash
 uv sync
 ```
+
+GitHub runs the same checks automatically from [.github/workflows/ci.yml](/mnt/Development/Python/SmallOldGames/.github/workflows/ci.yml).
 
 Run the game:
 
