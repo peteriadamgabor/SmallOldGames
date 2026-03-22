@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Small Old Games
+Comment=Retro mobile game remakes in Python with Vulkan
+Exec=SmallOldGames
+Icon=smalloldgames
+Categories=Game;ArcadeGame;
+Terminal=false

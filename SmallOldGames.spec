@@ -5,8 +5,10 @@ from pathlib import Path
 
 project_root = Path.cwd()
 assets_dir = project_root / "assets"
+branding_dir = assets_dir / "branding"
 
 datas = [
+    (str(branding_dir), "assets/branding"),
     (str(assets_dir / "config"), "assets/config"),
     (str(assets_dir / "shaders"), "assets/shaders"),
     (str(assets_dir / "sprites"), "assets/sprites"),
@@ -35,6 +37,7 @@ exe = EXE(
     a.datas,
     [],
     name="SmallOldGames",
+    icon=str(branding_dir / "smalloldgames.ico") if (branding_dir / "smalloldgames.ico").exists() else None,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

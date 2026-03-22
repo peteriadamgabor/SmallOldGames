@@ -7,6 +7,7 @@ The first implemented game is `Sketch Hopper`, an endless vertical jumper inspir
 Repository automation:
 
 - GitHub Actions CI runs compile and unit-test checks on Linux and Windows for pushes to `main` and pull requests.
+- GitHub Actions release builds can package Linux and Windows artifacts for version tags like `v0.1.0`.
 
 ## Current Features
 
@@ -32,6 +33,7 @@ Supported development targets:
 
 Distribution options now included in the repo:
 
+- Linux portable bundle via PyInstaller + `.tar.gz`
 - Windows onedir executable build via PyInstaller
 - Standard Python source distribution for developers
 
@@ -107,6 +109,17 @@ Practical Windows notes:
 - If you use NVIDIA / AMD / Intel drivers from the vendor, Vulkan runtime is usually installed with the driver.
 - If you want shader rebuild tools, install the Vulkan SDK and make sure `glslangValidator.exe` is on `PATH`.
 - Run the game from `Windows Terminal`, PowerShell, or Command Prompt, not from a headless remote shell.
+
+## Branding Assets
+
+Branding files now live in `assets/branding/`:
+
+- `smalloldgames.svg`
+- `smalloldgames.ico`
+- `sketch_hopper.svg`
+- `SmallOldGames.desktop`
+
+These are used for packaging, release artifacts, and desktop integration.
 
 ## Verify Vulkan
 
@@ -203,6 +216,39 @@ Build output:
 - main executable: `dist\SmallOldGames\SmallOldGames.exe`
 
 For easy distribution, zip the full `dist\SmallOldGames\` directory and share that folder, not only the `.exe`.
+
+## Building A Linux Bundle
+
+The repository also includes a Linux packaging path that builds a portable folder and compressed archive.
+
+File involved:
+
+- [build_linux.sh](/mnt/Development/Python/SmallOldGames/scripts/build_linux.sh)
+
+Run:
+
+```bash
+bash scripts/build_linux.sh
+```
+
+Manual build:
+
+```bash
+uv sync --extra build
+uv run pyinstaller --noconfirm SmallOldGames.spec
+```
+
+Build output:
+
+- bundle directory: `dist/SmallOldGames/`
+- archive: `dist/SmallOldGames-linux-<arch>.tar.gz`
+
+The Linux bundle also includes:
+
+- a `.desktop` file
+- SVG branding assets
+
+For distribution, share the generated `.tar.gz` archive or the full `dist/SmallOldGames/` directory.
 
 ## Controls
 
@@ -343,6 +389,30 @@ Install dependencies including packaging tools:
 ```bash
 uv sync --extra build
 ```
+
+Build Linux bundle:
+
+```bash
+bash scripts/build_linux.sh
+```
+
+Build Windows package on Windows:
+
+```powershell
+.\scripts\build_windows.ps1
+```
+
+## Releases
+
+Tagged releases can now produce packaged artifacts through GitHub Actions:
+
+- workflow: [.github/workflows/release.yml](/mnt/Development/Python/SmallOldGames/.github/workflows/release.yml)
+- tag format: `v*`, for example `v0.1.0`
+
+Expected release artifacts:
+
+- `SmallOldGames-linux-x86_64.tar.gz`
+- `SmallOldGames-windows-x64.zip`
 
 Run the game:
 

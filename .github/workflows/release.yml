@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: SmallOldGames-linux
+            archive: dist/SmallOldGames-linux-x86_64.tar.gz
+            build_cmd: bash scripts/build_linux.sh
+          - os: windows-latest
+            artifact: SmallOldGames-windows
+            archive: dist/SmallOldGames-windows-x64.zip
+            build_cmd: .\scripts\build_windows.ps1
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build distribution
+        shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
+        run: ${{ matrix.build_cmd }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.archive }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-artifacts/SmallOldGames-linux/SmallOldGames-linux-x86_64.tar.gz
+            release-artifacts/SmallOldGames-windows/SmallOldGames-windows-x64.zip
