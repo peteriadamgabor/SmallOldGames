@@ -30,6 +30,11 @@ Supported development targets:
 - Linux desktop
 - Windows desktop
 
+Distribution options now included in the repo:
+
+- Windows onedir executable build via PyInstaller
+- Standard Python source distribution for developers
+
 Not finished yet:
 
 - Android packaging and touch-native deployment
@@ -156,6 +161,48 @@ Windows PowerShell example:
 ```powershell
 uv run smalloldgames
 ```
+
+## Building A Windows `.exe`
+
+The repository now includes PyInstaller build support for a Windows executable.
+
+Files involved:
+
+- [SmallOldGames.spec](/mnt/Development/Python/SmallOldGames/SmallOldGames.spec)
+- [build_windows.ps1](/mnt/Development/Python/SmallOldGames/scripts/build_windows.ps1)
+- [build_windows.bat](/mnt/Development/Python/SmallOldGames/scripts/build_windows.bat)
+
+Important:
+
+- Build the Windows executable on Windows.
+- The produced app is a desktop executable, not an installer.
+- End users still need a working Vulkan-capable GPU and driver on their machine.
+
+### PowerShell
+
+```powershell
+.\scripts\build_windows.ps1
+```
+
+### Command Prompt
+
+```bat
+scripts\build_windows.bat
+```
+
+### Manual build
+
+```powershell
+uv sync --extra build
+uv run pyinstaller --noconfirm SmallOldGames.spec
+```
+
+Build output:
+
+- executable folder: `dist\SmallOldGames\`
+- main executable: `dist\SmallOldGames\SmallOldGames.exe`
+
+For easy distribution, zip the full `dist\SmallOldGames\` directory and share that folder, not only the `.exe`.
 
 ## Controls
 
@@ -291,6 +338,12 @@ uv sync
 
 GitHub runs the same checks automatically from [.github/workflows/ci.yml](/mnt/Development/Python/SmallOldGames/.github/workflows/ci.yml).
 
+Install dependencies including packaging tools:
+
+```bash
+uv sync --extra build
+```
+
 Run the game:
 
 ```bash
@@ -354,6 +407,20 @@ What to do:
 - verify Vulkan support first
 - update/reinstall the GPU driver
 - confirm the machine exposes a Vulkan-capable device
+
+### Windows `.exe` starts on one machine but not another
+
+Typical causes:
+
+- missing Vulkan-capable GPU
+- missing/broken GPU driver
+- antivirus interfering with unpacked files
+
+What to do:
+
+- update the GPU driver
+- confirm Vulkan support on the target machine
+- distribute the full `dist\SmallOldGames\` folder
 
 ### Sound does not play
 

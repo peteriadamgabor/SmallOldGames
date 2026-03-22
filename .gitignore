@@ -18,6 +18,7 @@ htmlcov/
 # Build artifacts
 build/
 dist/
+*.spec.tmp
 *.egg-info/
 
 # IDEs and editors
