@@ -1,0 +1,26 @@
+/* XPM */
+static char * black_hole_xpm[] = {
+"16 16 6 1",
+"  c None",
+". c #2A2262",
+"o c #5937A8",
+"x c #0B0C14",
+"h c #A88BFF",
+"s c #151826",
+"                ",
+"      hhhh      ",
+"    hhoooohh    ",
+"   hooxxxxooh   ",
+"  hooxxxxxxooh  ",
+" hooxxxxxxxxooh ",
+" hoxxxxxxxxxxoh ",
+" hoxxxxxxxxxxoh ",
+" hoxxxxxxxxxxoh ",
+" hooxxxxxxxxooh ",
+"  hooxxxxxxooh  ",
+"   hooxxxxooh   ",
+"    hhoooohh    ",
+"      hhhh      ",
+"                ",
+"                "
+};

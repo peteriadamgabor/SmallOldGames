@@ -1,0 +1,16 @@
+/* XPM */
+static char * spring_xpm[] = {
+"10 8 4 1",
+"  c None",
+". c #7D1F98",
+"y c #F3D14A",
+"d c #51225E",
+"   yyyy   ",
+"  yyyyyy  ",
+"   ....   ",
+"  ..dd..  ",
+"   ....   ",
+"  ..dd..  ",
+"   ....   ",
+"          "
+};

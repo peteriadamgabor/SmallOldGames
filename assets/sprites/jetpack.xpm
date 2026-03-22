@@ -1,0 +1,27 @@
+/* XPM */
+static char * jetpack_xpm[] = {
+"16 16 7 1",
+"  c None",
+". c #1D2230",
+"m c #B7C7D8",
+"y c #E0B33D",
+"r c #DD5A39",
+"b c #4FA7FF",
+"w c #FFFFFF",
+"                ",
+"                ",
+"     mm  mm     ",
+"    mwwmmwwm    ",
+"    mmmmmmmm    ",
+"    m.b..b.m    ",
+"    m.b..b.m    ",
+"    mmmmmmmm    ",
+"    m..mm..m    ",
+"    m..mm..m    ",
+"     .m..m.     ",
+"     .yyyy.     ",
+"      yrry      ",
+"       rr       ",
+"                ",
+"                "
+};

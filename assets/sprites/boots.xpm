@@ -1,0 +1,21 @@
+/* XPM */
+static char *boots[] = {
+"12 12 5 1",
+"  c None",
+". c #F6D256",
+"o c #E88431",
+"+ c #8B4A1F",
+"@ c #FFF9D9",
+"            ",
+"   ..  ..   ",
+"  .@@..@@.  ",
+"  oooooooo  ",
+"  oo++oo++  ",
+"  oo++oo++  ",
+"  oooooooo  ",
+"   oooooo   ",
+"   +o  o+   ",
+"   ++  ++   ",
+"            ",
+"            "
+};

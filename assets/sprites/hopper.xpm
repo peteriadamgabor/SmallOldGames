@@ -1,0 +1,27 @@
+/* XPM */
+static char * hopper_xpm[] = {
+"16 16 7 1",
+"  c None",
+". c #101112",
+"w c #FFFFFF",
+"g c #6FD12B",
+"d c #2F7C14",
+"y c #F3A63A",
+"b c #3A7BD5",
+"                ",
+"      ww        ",
+"     w..w       ",
+"    wwwwyyyy    ",
+"   ggggggyyy    ",
+"  gggggggg.y    ",
+"  gggggggggg    ",
+"  gggggggggg    ",
+"  ggggbbgggg    ",
+"   gggggggg     ",
+"   gggggggg     ",
+"   .g.  .g.     ",
+"  ..g.  .g..    ",
+"    .    .      ",
+"                ",
+"                "
+};

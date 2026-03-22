@@ -1,0 +1,20 @@
+/* XPM */
+static char * monster_xpm[] = {
+"16 10 6 1",
+"  c None",
+". c #17181B",
+"r c #C2363A",
+"p c #F06A6E",
+"w c #FFFFFF",
+"y c #F2D447",
+"                ",
+"   pppppppppp   ",
+"  prrrrrrrrrrp  ",
+" prrwwrrrrwwrrp ",
+" prrr.rrrr.rrrp ",
+" prrrrrrrrrrrrp ",
+"  prryyyyyyrrp  ",
+"   rr  rr  rr   ",
+"  rr    rr  rr  ",
+"                "
+};

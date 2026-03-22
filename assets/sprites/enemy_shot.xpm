@@ -1,0 +1,16 @@
+/* XPM */
+static char *enemy_shot[] = {
+"8 8 4 1",
+"  c None",
+". c #FF7860",
+"o c #FFD0A5",
+"+ c #7A1E14",
+"   ..   ",
+"  .oo.  ",
+" .oooo. ",
+" .o++o. ",
+" .o++o. ",
+" .oooo. ",
+"  .oo.  ",
+"   ..   "
+};

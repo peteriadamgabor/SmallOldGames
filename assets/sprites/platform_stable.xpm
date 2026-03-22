@@ -1,0 +1,17 @@
+/* XPM */
+static char * platform_stable_xpm[] = {
+"24 8 5 1",
+"  c None",
+". c #13310E",
+"g c #4FB928",
+"l c #8BE056",
+"d c #2A7E17",
+"                        ",
+"   llllllllllllllllll   ",
+"  gggggggggggggggggggg  ",
+" gggggggggggggggggggggg ",
+" gggggggggggggggggggggg ",
+" gddddddddddddddddddddg ",
+"  .dddddddddddddddddd.  ",
+"                        "
+};

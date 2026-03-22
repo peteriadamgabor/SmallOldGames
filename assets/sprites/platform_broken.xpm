@@ -1,0 +1,18 @@
+/* XPM */
+static char * platform_broken_xpm[] = {
+"24 8 6 1",
+"  c None",
+". c #2E180A",
+"b c #8E562A",
+"c c #BC7A3D",
+"l c #D59A62",
+"d c #4E2710",
+"                        ",
+"   llllllllllllllllll   ",
+"  cccccccccccccccccccc  ",
+" bbbbbbbb.ccc.bbbbbbbb  ",
+" bbbbb.ccc.bbb.ccccbbb  ",
+" bdddddd.ddddddddddddb  ",
+"  .dddddddddddddddd..   ",
+"                        "
+};

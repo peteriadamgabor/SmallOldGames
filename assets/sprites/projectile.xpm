@@ -1,0 +1,15 @@
+/* XPM */
+static char * projectile_xpm[] = {
+"4 8 3 1",
+"  c None",
+". c #23252B",
+"y c #F7E54D",
+" .. ",
+" .y ",
+" .y ",
+" .y ",
+" .y ",
+" .y ",
+" .y ",
+" .. "
+};

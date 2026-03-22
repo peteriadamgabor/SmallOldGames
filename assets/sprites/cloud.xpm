@@ -1,0 +1,25 @@
+/* XPM */
+static char * cloud_xpm[] = {
+"32 16 5 1",
+"  c None",
+". c #FFFFFF",
+"o c #E9F5FF",
+"s c #BCD5E8",
+"h c #D8EBF7",
+"                                ",
+"                                ",
+"            oooooooo            ",
+"       ooooooooooooooo          ",
+"     oooooooooooooooooooo       ",
+"    ooooooooooooooooooooooo     ",
+"   oooooooooooooooooooooooo     ",
+"  oooooooooooooooooooooooooo    ",
+"  ooooooooooooooooooooooooooo   ",
+"  ooooooooooooooooooooooooooo   ",
+"  ooooooooooooooooooooooooooo   ",
+"   hhhhhhhhhhhhhhhhhhhhhhhhh    ",
+"    sssssssssssssssssssssss     ",
+"       ssssssssssssssssss       ",
+"                                ",
+"                                "
+};

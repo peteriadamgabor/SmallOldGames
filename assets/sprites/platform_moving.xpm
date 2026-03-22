@@ -1,0 +1,18 @@
+/* XPM */
+static char * platform_moving_xpm[] = {
+"24 8 6 1",
+"  c None",
+". c #102031",
+"b c #2E7FE4",
+"c c #59B5FF",
+"w c #DDF6FF",
+"d c #1E5AA8",
+"                        ",
+"   wwwwwwwwwwwwwwwwww   ",
+"  cccccccccccccccccccc  ",
+" bbbbbbbbbbbbbbbbbbbbbb ",
+" bbbbbbbbbbbbbbbbbbbbbb ",
+" bddddddddddddddddddddb ",
+"  .dddddddddddddddddd.  ",
+"                        "
+};
