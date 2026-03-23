@@ -128,9 +128,11 @@ class SnakeScene:
             )
 
         # HUD
-        draw.text(draw.width * 0.5, 880, "SNAKE CLASSIC", scale=5, color=TEXT_LIGHT, centered=True)
-        draw.text(60, 800, f"SCORE: {self.score:04d}", scale=3, color=GOOD)
-        draw.text(draw.width - 60, 800, f"BEST: {self.best_score:04d}", scale=3, color=ACCENT, centered=True)
+        draw.text(draw.width * 0.5, 888, "SNAKE CLASSIC", scale=3, color=TEXT_LIGHT, centered=True)
+        draw.text(60, 820, f"SCORE: {self.score:04d}", scale=2, color=GOOD)
+        best_text = f"BEST: {self.best_score:04d}"
+        best_width = draw.measure_text(best_text, scale=2)
+        draw.text(draw.width - 60 - best_width, 820, best_text, scale=2, color=ACCENT)
 
         if self.touch_controls_enabled:
             self._render_touch_controls(draw)
@@ -230,8 +232,8 @@ class SnakeScene:
 
     def _render_overlay(self, draw: DrawList, title: str, subtitle: str) -> None:
         draw.quad(0, 0, draw.width, draw.height, (0, 0, 0, 0.6), world=False)
-        draw.text(draw.width * 0.5, 400, title, scale=6, color=TEXT_LIGHT, centered=True)
-        draw.text(draw.width * 0.5, 340, subtitle, scale=2, color=TEXT_MUTED, centered=True)
+        draw.text(draw.width * 0.5, 420, title, scale=4, color=TEXT_LIGHT, centered=True)
+        draw.text(draw.width * 0.5, 370, subtitle, scale=1.5, color=TEXT_MUTED, centered=True)
 
     def _render_touch_controls(self, draw: DrawList) -> None:
         # D-pad style touch hints

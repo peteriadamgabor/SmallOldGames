@@ -622,10 +622,12 @@ class SpaceInvadersScene:
             )
 
     def _render_hud(self, draw: DrawList) -> None:
-        draw.text(draw.width * 0.5, 900, "SPACE INVADERS", scale=5, color=TEXT_LIGHT, centered=True)
-        draw.text(30, 850, f"SCORE {self.score:05d}", scale=3, color=GOOD)
-        draw.text(draw.width - 30, 850, f"BEST {self.best_score:05d}", scale=3, color=ACCENT, centered=True)
-        draw.text(draw.width * 0.5, 850, f"WAVE {self.wave}", scale=3, color=TEXT_MUTED, centered=True)
+        draw.text(draw.width * 0.5, 906, "SPACE INVADERS", scale=3, color=TEXT_LIGHT, centered=True)
+        draw.text(30, 864, f"SCORE {self.score:05d}", scale=2, color=GOOD)
+        best_text = f"BEST {self.best_score:05d}"
+        best_width = draw.measure_text(best_text, scale=2)
+        draw.text(draw.width - 30 - best_width, 864, best_text, scale=2, color=ACCENT)
+        draw.text(draw.width * 0.5, 864, f"WAVE {self.wave}", scale=2, color=TEXT_MUTED, centered=True)
 
         lx = 30.0
         for i in range(self.lives):
@@ -638,9 +640,9 @@ class SpaceInvadersScene:
 
     def _render_overlay(self, draw: DrawList, title: str, subtitle: str) -> None:
         draw.quad(0, 0, draw.width, draw.height, (0, 0, 0, 0.6), world=False)
-        draw.text(draw.width * 0.5, 500, title, scale=6, color=TEXT_LIGHT, centered=True)
-        draw.text(draw.width * 0.5, 450, f"SCORE  {self.score:05d}", scale=4, color=ACCENT, centered=True)
-        draw.text(draw.width * 0.5, 400, subtitle, scale=2, color=TEXT_MUTED, centered=True)
+        draw.text(draw.width * 0.5, 500, title, scale=4, color=TEXT_LIGHT, centered=True)
+        draw.text(draw.width * 0.5, 456, f"SCORE  {self.score:05d}", scale=3, color=ACCENT, centered=True)
+        draw.text(draw.width * 0.5, 416, subtitle, scale=1.5, color=TEXT_MUTED, centered=True)
 
     # -----------------------------------------------------------------------
     # Persistence
