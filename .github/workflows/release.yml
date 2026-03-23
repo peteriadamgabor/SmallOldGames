@@ -19,12 +19,10 @@ jobs:
             artifact: SmallOldGames-linux
             archive: dist/SmallOldGames-linux-x86_64.tar.gz
             build_cmd: bash scripts/build_linux.sh
-            shell: bash
           - os: windows-latest
             artifact: SmallOldGames-windows
             archive: dist/SmallOldGames-windows-x64.zip
             build_cmd: .\scripts\build_windows.ps1
-            shell: pwsh
 
     steps:
       - name: Check out repository
@@ -36,7 +34,6 @@ jobs:
           python-version: "3.13"
 
       - name: Build distribution
-        shell: ${{ matrix.shell }}
         run: ${{ matrix.build_cmd }}
 
       - name: Upload build artifact
