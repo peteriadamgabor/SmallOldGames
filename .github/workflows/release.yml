@@ -34,7 +34,6 @@ jobs:
           python-version: "3.13"
 
       - name: Build distribution
-        shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
         run: ${{ matrix.build_cmd }}
 
       - name: Upload build artifact
