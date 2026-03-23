@@ -20,6 +20,7 @@ class ScoreRepositoryTests(unittest.TestCase):
             self.assertEqual(repository.best_score("sketch_hopper"), 420)
             self.assertEqual([entry.score for entry in repository.top_scores("sketch_hopper")], [420, 260, 180])
             self.assertEqual([entry.player_name for entry in repository.top_scores("sketch_hopper")], ["BBB", "CCC", "AAA"])
+            repository.close()
 
     def test_record_score_returns_rank(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -28,6 +29,7 @@ class ScoreRepositoryTests(unittest.TestCase):
             repository.record_score("sketch_hopper", 280)
 
             self.assertEqual(repository.record_score("sketch_hopper", 350), 2)
+            repository.close()
 
     def test_player_name_and_stats_are_persistent(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -41,6 +43,7 @@ class ScoreRepositoryTests(unittest.TestCase):
             self.assertEqual(stats.total_runs, 2)
             self.assertEqual(stats.average_score, 200)
             self.assertEqual(stats.best_score, 300)
+            repository.close()
 
     def test_sound_and_touch_settings_persist(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -50,6 +53,7 @@ class ScoreRepositoryTests(unittest.TestCase):
 
             self.assertFalse(repository.get_sound_enabled())
             self.assertFalse(repository.get_touch_controls_enabled())
+            repository.close()
 
     def test_repository_closes_connections_cleanly(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -59,6 +63,7 @@ class ScoreRepositoryTests(unittest.TestCase):
                 repository.best_score("sketch_hopper")
                 gc.collect()
             self.assertEqual([warning for warning in caught if issubclass(warning.category, ResourceWarning)], [])
+            repository.close()
 
 
 if __name__ == "__main__":

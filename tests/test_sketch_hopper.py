@@ -380,6 +380,7 @@ class SketchHopperTests(unittest.TestCase):
             scene.update(0.0, inputs)
             self.assertFalse(scene.sound_enabled)
             self.assertFalse(repository.get_sound_enabled())
+            repository.close()
 
     def test_pause_menu_can_switch_to_balance_page(self) -> None:
         scene = self.make_scene()
@@ -473,6 +474,7 @@ class SketchHopperTests(unittest.TestCase):
             self.assertEqual(scene.best_score, 321)
             self.assertIsNotNone(scene.latest_rank)
             self.assertEqual(repository.top_scores("sketch_hopper", limit=1)[0].player_name, "ROCKET")
+            repository.close()
 
     def test_zero_score_game_over_text_does_not_claim_board_update(self) -> None:
         scene = self.make_scene()

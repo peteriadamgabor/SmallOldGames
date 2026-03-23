@@ -10,9 +10,9 @@ $archivePath = "dist/SmallOldGames-windows-x64.zip"
 if (Test-Path $archivePath) {
     Remove-Item $archivePath -Force
 }
-Compress-Archive -Path "dist/SmallOldGames/*" -DestinationPath $archivePath
+Compress-Archive -Path "dist/SmallOldGames.exe" -DestinationPath $archivePath
 
 Write-Host ""
 Write-Host "Build complete."
-Write-Host "Executable: dist/SmallOldGames/SmallOldGames.exe"
+Write-Host "Executable: dist/SmallOldGames.exe"
 Write-Host "Archive: $archivePath"
