@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from collections.abc import Callable
 
-from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, Transition
+from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion, Transition
 from smalloldgames.menus.common import (
     ACCENT,
     BG_BOTTOM,
@@ -173,16 +173,6 @@ class SnakeScene:
         elif inputs.action_pressed(GameAction.NAV_RIGHT) and self.direction != (-1, 0):
             self.next_direction = (1, 0)
 
-        if self.touch_controls_enabled and inputs.pointer_pressed:
-            if inputs.pointer_in_rect(210, 140, 120, 80) and self.direction != (0, -1):  # Up
-                self.next_direction = (0, 1)
-            elif inputs.pointer_in_rect(210, 0, 120, 80) and self.direction != (0, 1):  # Down
-                self.next_direction = (0, -1)
-            elif inputs.pointer_in_rect(100, 70, 110, 80) and self.direction != (1, 0):  # Left
-                self.next_direction = (-1, 0)
-            elif inputs.pointer_in_rect(330, 70, 110, 80) and self.direction != (-1, 0):  # Right
-                self.next_direction = (1, 0)
-
     def _spawn_food(self) -> tuple[int, int]:
         while True:
             pos = (self.random.randint(0, self.grid_size - 1), self.random.randint(0, self.grid_size - 1))
@@ -236,6 +226,16 @@ class SnakeScene:
         draw_button(draw, x=210, y=0, width=120, height=80, label="DOWN", label_scale=2)
         draw_button(draw, x=100, y=70, width=110, height=80, label="LEFT", label_scale=2)
         draw_button(draw, x=330, y=70, width=110, height=80, label="RIGHT", label_scale=2)
+
+    def touch_regions(self) -> tuple[TouchRegion, ...]:
+        if not self.touch_controls_enabled:
+            return ()
+        return (
+            TouchRegion(210, 140, 120, 80, frozenset({GameAction.NAV_UP})),
+            TouchRegion(210, 0, 120, 80, frozenset({GameAction.NAV_DOWN})),
+            TouchRegion(100, 70, 110, 80, frozenset({GameAction.NAV_LEFT})),
+            TouchRegion(330, 70, 110, 80, frozenset({GameAction.NAV_RIGHT})),
+        )
 
     @staticmethod
     def music_track() -> str | None:

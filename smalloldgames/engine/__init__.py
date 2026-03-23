@@ -4,7 +4,7 @@ from .audio import AudioEngine
 from .components import Lifetime, Position, Size, Velocity
 from .ecs import ComponentListProxy, EntityId, System, World, run_systems
 from .game_registry import GameDefinition, GameRegistry, load_game_definition
-from .input import GameAction, InputState
+from .input import GameAction, InputState, TouchRegion
 from .resources import ResourceRegistry
 from .scene import Pop, Push, Scene, SceneContext, SceneResult, Transition
 
@@ -26,6 +26,7 @@ __all__ = [
     "SceneResult",
     "Size",
     "System",
+    "TouchRegion",
     "Transition",
     "Velocity",
     "World",

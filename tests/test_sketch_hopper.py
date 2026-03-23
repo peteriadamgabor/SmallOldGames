@@ -365,6 +365,7 @@ class SketchHopperTests(unittest.TestCase):
         inputs = InputState()
         inputs.on_cursor_pos(40.0, 40.0)
         inputs.on_pointer(glfw.PRESS)
+        inputs.set_touch_regions(scene.touch_regions())
         original_x = scene.player.x
         scene.update(0.1, inputs)
         self.assertLess(scene.player.x, original_x)
@@ -375,6 +376,7 @@ class SketchHopperTests(unittest.TestCase):
         inputs = InputState()
         inputs.on_cursor_pos(480.0, 910.0)
         inputs.on_pointer(glfw.PRESS)
+        inputs.set_touch_regions(scene.touch_regions())
         scene.update(0.0, inputs)
         self.assertTrue(scene.paused)
 

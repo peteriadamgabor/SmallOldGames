@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+import glfw
+
 from smalloldgames.engine.input import InputState
 from smalloldgames.games.snake import SnakeScene
 
@@ -43,11 +45,22 @@ class SnakeTests(unittest.TestCase):
         scene = SnakeScene(lambda: None, seed=42)
         scene.direction = (0, -1)
         inputs = InputState()
-        import glfw
 
         inputs.on_key(glfw.KEY_UP, glfw.PRESS)  # Try to go UP while going DOWN
         scene._handle_input(inputs)
         self.assertEqual(scene.next_direction, (0, -1))  # Should still be DOWN
+
+    def test_touch_regions_change_snake_direction(self) -> None:
+        scene = SnakeScene(lambda: None, seed=42)
+        scene.touch_controls_enabled = True
+        inputs = InputState()
+        inputs.on_cursor_pos(380.0, 100.0)
+        inputs.on_pointer(glfw.PRESS)
+        inputs.set_touch_regions(scene.touch_regions())
+
+        scene._handle_input(inputs)
+
+        self.assertEqual(scene.next_direction, (1, 0))
 
 
 if __name__ == "__main__":

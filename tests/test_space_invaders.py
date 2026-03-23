@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+import glfw
+
 from smalloldgames.engine import SceneContext
 from smalloldgames.engine.input import InputState
 from smalloldgames.games.space_invaders import SpaceInvadersScene
@@ -125,6 +127,28 @@ class SpaceInvadersTests(unittest.TestCase):
         scene._update_ufo(1.0 / 120.0)
         self.assertGreater(scene.score, 0)
         self.assertFalse(scene.ufo_active)
+
+    def test_touch_regions_move_and_fire(self) -> None:
+        scene = _make_scene()
+        scene.touch_controls_enabled = True
+        move_inputs = InputState()
+        move_inputs.on_cursor_pos(40.0, 40.0)
+        move_inputs.on_pointer(glfw.PRESS)
+        move_inputs.set_touch_regions(scene.touch_regions())
+        player_x = scene.player_x
+
+        scene._update_player(0.1, move_inputs)
+
+        self.assertLess(scene.player_x, player_x)
+
+        fire_inputs = InputState()
+        fire_inputs.on_cursor_pos(260.0, 40.0)
+        fire_inputs.on_pointer(glfw.PRESS)
+        fire_inputs.set_touch_regions(scene.touch_regions())
+
+        scene._update_player(0.0, fire_inputs)
+
+        self.assertEqual(len(scene.bullets), 1)
 
 
 if __name__ == "__main__":

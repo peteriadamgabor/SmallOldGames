@@ -1,23 +1,47 @@
 from __future__ import annotations
 
 import unittest
-from pathlib import Path
 from unittest.mock import Mock, patch
 
-from smalloldgames.engine.audio import _MAX_ACTIVE_EFFECTS, AudioEngine, synthesize_music_pcm, synthesize_pcm
+from smalloldgames.engine.audio import (
+    _MAX_ACTIVE_EFFECTS,
+    AudioEngine,
+    _MiniaudioBackend,
+    _NullAudioBackend,
+    synthesize_music_pcm,
+    synthesize_pcm,
+)
 
 
-class _FakeProcess:
-    def __init__(self, *, alive: bool = True) -> None:
-        self.alive = alive
-        self.terminate = Mock(side_effect=self._terminate)
-        self.wait = Mock()
+class _FakeBackend:
+    def __init__(self) -> None:
+        self.effect_calls: list[bytes] = []
+        self.music_calls: list[bytes] = []
+        self.stop_music_calls = 0
+        self.stop_effects_calls = 0
+        self.close_calls = 0
 
-    def _terminate(self) -> None:
-        self.alive = False
+    def play_effect(self, pcm: bytes) -> bool:
+        self.effect_calls.append(pcm)
+        return True
 
-    def poll(self):
-        return None if self.alive else 0
+    def play_music(self, pcm: bytes) -> None:
+        self.music_calls.append(pcm)
+
+    def stop_music(self) -> None:
+        self.stop_music_calls += 1
+
+    def stop_effects(self) -> None:
+        self.stop_effects_calls += 1
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
+class _FakePlaybackDevice:
+    def __init__(self, *args, **kwargs) -> None:
+        self.start = Mock()
+        self.close = Mock()
 
 
 class AudioTests(unittest.TestCase):
@@ -31,55 +55,87 @@ class AudioTests(unittest.TestCase):
         self.assertGreater(len(music), 10_000)
         self.assertEqual(len(music) % 2, 0)
 
-    def test_play_respects_max_active_effects_cap(self) -> None:
-        engine = AudioEngine()
+    def test_play_uses_backend_and_caches_effect_clip(self) -> None:
+        backend = _FakeBackend()
+        with patch("smalloldgames.engine.audio._create_audio_backend", return_value=backend):
+            engine = AudioEngine()
         self.addCleanup(engine.close)
-        engine._winsound = None
-        engine._player = ["fake-player"]
-        engine._active_effects = [_FakeProcess() for _ in range(_MAX_ACTIVE_EFFECTS)]
 
-        with (
-            patch.object(engine, "_ensure_effect", return_value=Path("/tmp/effect.wav")),
-            patch("smalloldgames.engine.audio.subprocess.Popen") as popen,
-        ):
+        with patch("smalloldgames.engine.audio.synthesize_pcm", wraps=synthesize_pcm) as synth:
+            engine.play("jump")
             engine.play("jump")
 
-        popen.assert_not_called()
+        self.assertEqual(len(backend.effect_calls), 2)
+        synth.assert_called_once()
 
-    def test_stop_music_terminates_process_and_joins_thread(self) -> None:
-        engine = AudioEngine()
+    def test_stop_music_delegates_to_backend_and_clears_track(self) -> None:
+        backend = _FakeBackend()
+        with patch("smalloldgames.engine.audio._create_audio_backend", return_value=backend):
+            engine = AudioEngine()
         self.addCleanup(engine.close)
-        process = _FakeProcess()
-        thread = Mock()
-        engine._music_process = process
-        engine._music_thread = thread
         engine._current_music = "launcher"
 
         engine.stop_music()
 
-        process.terminate.assert_called_once()
-        thread.join.assert_called_once()
-        self.assertIsNone(engine._music_process)
-        self.assertIsNone(engine._music_thread)
+        self.assertEqual(backend.stop_music_calls, 1)
         self.assertIsNone(engine._current_music)
-        self.assertFalse(engine._music_stop.is_set())
 
     def test_set_enabled_false_stops_audio_and_true_restarts_requested_track(self) -> None:
-        engine = AudioEngine()
+        backend = _FakeBackend()
+        with patch("smalloldgames.engine.audio._create_audio_backend", return_value=backend):
+            engine = AudioEngine()
         self.addCleanup(engine.close)
         engine._requested_music = "launcher"
 
-        with (
-            patch.object(engine, "stop_music") as stop_music,
-            patch.object(engine, "_stop_effects") as stop_effects,
-            patch.object(engine, "play_music") as play_music,
-        ):
+        with patch.object(engine, "play_music") as play_music:
             engine.set_enabled(False)
             engine.set_enabled(True)
 
-        stop_music.assert_called_once()
-        stop_effects.assert_called_once()
+        self.assertEqual(backend.stop_music_calls, 1)
+        self.assertEqual(backend.stop_effects_calls, 1)
         play_music.assert_called_once_with("launcher")
+
+    def test_miniaudio_backend_caps_active_effects(self) -> None:
+        with patch("smalloldgames.engine.audio.miniaudio.PlaybackDevice", _FakePlaybackDevice):
+            backend = _MiniaudioBackend()
+        self.addCleanup(backend.close)
+        pcm = synthesize_pcm(((440.0, 0.02, 0.2),))
+
+        for _ in range(_MAX_ACTIVE_EFFECTS):
+            self.assertTrue(backend.play_effect(pcm))
+
+        self.assertFalse(backend.play_effect(pcm))
+
+    def test_miniaudio_backend_mixes_music_and_effects(self) -> None:
+        with patch("smalloldgames.engine.audio.miniaudio.PlaybackDevice", _FakePlaybackDevice):
+            backend = _MiniaudioBackend()
+        self.addCleanup(backend.close)
+        backend.play_music(synthesize_music_pcm(((220.0, 0.03, 0.05),), loops=1))
+        backend.play_effect(synthesize_pcm(((660.0, 0.02, 0.18),)))
+
+        mixed = backend._mix_frames(128)
+
+        self.assertEqual(len(mixed), 128)
+        self.assertTrue(any(sample != 0 for sample in mixed))
+
+    def test_null_backend_is_safe_noop(self) -> None:
+        backend = _NullAudioBackend()
+        self.assertFalse(backend.play_effect(b"\x00\x00"))
+        backend.play_music(b"\x00\x00")
+        backend.stop_music()
+        backend.stop_effects()
+        backend.close()
+
+    def test_close_stops_backend(self) -> None:
+        backend = _FakeBackend()
+        with patch("smalloldgames.engine.audio._create_audio_backend", return_value=backend):
+            engine = AudioEngine()
+
+        engine.close()
+
+        self.assertEqual(backend.stop_music_calls, 1)
+        self.assertEqual(backend.stop_effects_calls, 1)
+        self.assertEqual(backend.close_calls, 1)
 
 
 if __name__ == "__main__":

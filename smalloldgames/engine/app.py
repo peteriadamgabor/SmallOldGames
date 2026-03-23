@@ -155,6 +155,14 @@ class RuntimeLoop(_AppComponent):
                 fps_timer = 0.0
                 fps_counter = 0
 
+            set_touch_regions = getattr(self.inputs, "set_touch_regions", None)
+            if callable(set_touch_regions):
+                touch_regions = getattr(self.scene, "touch_regions", None)
+                if callable(touch_regions):
+                    set_touch_regions(tuple(touch_regions()))
+                else:
+                    set_touch_regions(())
+
             consumed_inputs = False
             fixed_updates = 0
             update_started = time.perf_counter()

@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import glfw
 
-from smalloldgames.engine import GameAction, InputState, SceneResult, Transition
+from smalloldgames.engine import GameAction, InputState, SceneResult, TouchRegion, Transition
 
 from .config import (
     load_sketch_hopper_config,
@@ -16,26 +16,13 @@ from .shared import BALANCE_FIELDS
 
 class SketchHopperUIMixin:
     def _control_move_axis(self, inputs: InputState) -> float:
-        keyboard_axis = inputs.action_axis(GameAction.MOVE_LEFT, GameAction.MOVE_RIGHT)
-        if not self.touch_controls_enabled or not inputs.pointer_down:
-            return keyboard_axis
-        if inputs.pointer_in_rect(*self._left_touch_rect()):
-            return -1.0
-        if inputs.pointer_in_rect(*self._right_touch_rect()):
-            return 1.0
-        return keyboard_axis
+        return inputs.action_axis(GameAction.MOVE_LEFT, GameAction.MOVE_RIGHT)
 
     def _shoot_tapped(self, inputs: InputState) -> bool:
-        return (
-            self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(*self._shoot_touch_rect())
-        )
+        return inputs.action_pressed(GameAction.FIRE)
 
     def _pause_tapped(self, inputs: InputState) -> bool:
-        return (
-            self.touch_controls_enabled
-            and inputs.pointer_pressed
-            and inputs.pointer_in_rect(*self._pause_button_rect())
-        )
+        return inputs.action_pressed(GameAction.PAUSE)
 
     def _update_pause_menu(self, inputs: InputState) -> SceneResult:
         if self.pause_page == "balance":
@@ -193,6 +180,16 @@ class SketchHopperUIMixin:
 
     def _pause_button_rect(self) -> tuple[float, float, float, float]:
         return (468.0, 896.0, 52.0, 44.0)
+
+    def touch_regions(self) -> tuple[TouchRegion, ...]:
+        if not self.touch_controls_enabled or self.paused or self.game_over:
+            return ()
+        return (
+            TouchRegion(*self._left_touch_rect(), frozenset({GameAction.MOVE_LEFT})),
+            TouchRegion(*self._right_touch_rect(), frozenset({GameAction.MOVE_RIGHT})),
+            TouchRegion(*self._shoot_touch_rect(), frozenset({GameAction.FIRE})),
+            TouchRegion(*self._pause_button_rect(), frozenset({GameAction.PAUSE})),
+        )
 
     def _pause_settings_tab_rect(self) -> tuple[float, float, float, float]:
         return (118.0, 634.0, 136.0, 34.0)

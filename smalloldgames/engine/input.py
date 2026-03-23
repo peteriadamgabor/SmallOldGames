@@ -86,6 +86,18 @@ for _action, _keys in _DEFAULT_KEY_MAP.items():
         _KEY_TO_ACTIONS.setdefault(_key, []).append(_action)
 
 
+@dataclass(frozen=True, slots=True)
+class TouchRegion:
+    x: float
+    y: float
+    width: float
+    height: float
+    actions: frozenset[GameAction]
+
+    def contains(self, pointer_x: float, pointer_y: float) -> bool:
+        return self.x <= pointer_x <= self.x + self.width and self.y <= pointer_y <= self.y + self.height
+
+
 @dataclass(slots=True)
 class InputState:
     held: set[int] = field(default_factory=set)
@@ -100,6 +112,9 @@ class InputState:
     # Action-level state (derived from key state + mapping)
     actions_held: set[GameAction] = field(default_factory=set)
     actions_pressed: set[GameAction] = field(default_factory=set)
+    touch_regions: tuple[TouchRegion, ...] = ()
+    touch_actions_held: set[GameAction] = field(default_factory=set)
+    touch_actions_pressed: set[GameAction] = field(default_factory=set)
 
     def on_key(self, key: int, action: int) -> None:
         if key < 0:
@@ -131,16 +146,16 @@ class InputState:
 
     def action_pressed(self, *actions: GameAction) -> bool:
         """Check if any of the given actions were triggered this frame."""
-        return any(a in self.actions_pressed for a in actions)
+        return any(a in self.actions_pressed or a in self.touch_actions_pressed for a in actions)
 
     def action_held(self, *actions: GameAction) -> bool:
         """Check if any of the given actions are currently held."""
-        return any(a in self.actions_held for a in actions)
+        return any(a in self.actions_held or a in self.touch_actions_held for a in actions)
 
     def action_axis(self, negative: GameAction, positive: GameAction) -> float:
         """Return -1, 0, or +1 based on held actions."""
-        neg = negative in self.actions_held
-        pos = positive in self.actions_held
+        neg = self.action_held(negative)
+        pos = self.action_held(positive)
         return float(pos) - float(neg)
 
     def axis(self, negative_keys: tuple[int, ...], positive_keys: tuple[int, ...]) -> float:
@@ -164,9 +179,22 @@ class InputState:
     def pointer_in_rect(self, x: float, y: float, width: float, height: float) -> bool:
         return x <= self.pointer_x <= x + width and y <= self.pointer_y <= y + height
 
+    def set_touch_regions(self, regions: tuple[TouchRegion, ...]) -> None:
+        self.touch_regions = regions
+        self.touch_actions_held.clear()
+        self.touch_actions_pressed.clear()
+        active_regions = [region for region in regions if region.contains(self.pointer_x, self.pointer_y)]
+        if self.pointer_down:
+            for region in active_regions:
+                self.touch_actions_held.update(region.actions)
+        if self.pointer_pressed:
+            for region in active_regions:
+                self.touch_actions_pressed.update(region.actions)
+
     def end_frame(self) -> None:
         self.pressed.clear()
         self.released.clear()
         self.actions_pressed.clear()
+        self.touch_actions_pressed.clear()
         self.pointer_pressed = False
         self.pointer_released = False
