@@ -4,6 +4,7 @@ import glfw
 
 from smalloldgames.engine import GameDefinition
 from smalloldgames.engine import InputState
+from smalloldgames.engine import Scene
 from smalloldgames.rendering.primitives import DrawList
 from smalloldgames.data.storage import ScoreEntry, ScoreRepository, ScoreStats
 
@@ -38,7 +39,7 @@ class LeaderboardScene:
         self.top_scores = self._load_top_scores()
         self.stats = self._load_stats()
 
-    def update(self, _: float, inputs: InputState) -> object | None:
+    def update(self, _: float, inputs: InputState) -> Scene | None:
         if inputs.pointer_pressed:
             if inputs.pointer_in_rect(42, 642, 456, 150):
                 self.editing_name = True
@@ -97,7 +98,7 @@ class LeaderboardScene:
     def window_title(self) -> str:
         return f"Small Old Games - {self.game.title} Leaderboard"
 
-    def _update_name_editor(self, inputs: InputState) -> object | None:
+    def _update_name_editor(self, inputs: InputState) -> Scene | None:
         if inputs.was_pressed(glfw.KEY_ESCAPE):
             self.editing_name = False
             self.draft_name = self.player_name

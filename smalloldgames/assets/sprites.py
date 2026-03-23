@@ -5,7 +5,10 @@ from functools import lru_cache
 from pathlib import Path
 import re
 
+from .bitmap_font import FONT_5X7
+
 Color = tuple[float, float, float, float]
+_FONT_GLYPH_PREFIX = "__font__:"
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +75,7 @@ def build_sprite_atlas(named_sprites: dict[str, Sprite], *, padding: int = 1) ->
     if not named_sprites:
         raise ValueError("build_sprite_atlas requires at least one sprite.")
 
-    ordered = sorted(named_sprites.items())
+    ordered = sorted({**named_sprites, **_build_font_sprites()}.items())
     atlas_width = max(
         64,
         2 + sum(sprite.width + padding for _, sprite in ordered) + padding,
@@ -100,7 +103,7 @@ def build_sprite_atlas(named_sprites: dict[str, Sprite], *, padding: int = 1) ->
         for _ in range(atlas_height)
     ]
 
-    # Reserve a white texel for flat-color geometry and bitmap text.
+    # Reserve a white texel for flat-color geometry.
     pixels[1][1] = (255, 255, 255, 255)
 
     packed: dict[str, PackedSprite] = {}
@@ -133,6 +136,25 @@ def build_sprite_atlas(named_sprites: dict[str, Sprite], *, padding: int = 1) ->
         white_uv=white_uv,
         sprites=packed,
     )
+
+
+def font_glyphs_from_atlas(atlas: SpriteAtlas) -> dict[str, PackedSprite]:
+    return {character: atlas.sprites[_font_sprite_name(character)] for character in FONT_5X7}
+
+
+def _font_sprite_name(character: str) -> str:
+    return f"{_FONT_GLYPH_PREFIX}{character}"
+
+
+def _build_font_sprites() -> dict[str, Sprite]:
+    return {_font_sprite_name(character): _bitmap_glyph_sprite(glyph) for character, glyph in FONT_5X7.items()}
+
+
+def _bitmap_glyph_sprite(glyph: tuple[str, ...]) -> Sprite:
+    pixels: list[tuple[Color | None, ...]] = []
+    for row in glyph:
+        pixels.append(tuple((1.0, 1.0, 1.0, 1.0) if bit == "1" else None for bit in row))
+    return Sprite(width=5, height=7, pixels=tuple(pixels))
 
 
 def _parse_hex_color(value: str) -> Color:

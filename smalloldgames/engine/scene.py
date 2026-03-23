@@ -7,7 +7,7 @@ from smalloldgames.rendering.primitives import DrawList
 
 
 class Scene(Protocol):
-    def update(self, dt: float, inputs: InputState) -> object | None:
+    def update(self, dt: float, inputs: InputState) -> Scene | None:
         ...
 
     def render(self, draw: DrawList) -> None:

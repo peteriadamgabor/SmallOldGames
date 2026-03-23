@@ -64,11 +64,11 @@ class World:
             return iter(())
         entity_ids = set(self.components(component_types[0]))
         for component_type in component_types[1:]:
-            entity_ids &= set(self.components(component_type))
-        rows: list[tuple[object, ...]] = []
-        for entity_id in sorted(entity_ids):
-            rows.append((entity_id, *(self.components(component_type)[entity_id] for component_type in component_types)))
-        return iter(rows)
+            entity_ids.intersection_update(self.components(component_type))
+        return (
+            (entity_id, *(self.components(component_type)[entity_id] for component_type in component_types))
+            for entity_id in entity_ids
+        )
 
 
 class ComponentListProxy(Generic[T]):

@@ -5,7 +5,7 @@ import time
 
 import glfw
 
-from smalloldgames.assets import SHADERS_DIR
+from smalloldgames.assets import SHADERS_DIR, font_glyphs_from_atlas
 from smalloldgames.data.storage import ScoreRepository
 from smalloldgames.games.sketch_hopper import SketchHopperScene
 from smalloldgames.games.sketch_hopper_game.assets import SKETCH_HOPPER_ATLAS
@@ -20,6 +20,8 @@ from .scene import Scene
 
 WINDOW_WIDTH = 540
 WINDOW_HEIGHT = 960
+FIXED_DT = 1.0 / 120.0
+MAX_FRAME_DT = 1.0 / 20.0
 
 
 def _content_rect(container_width: int, container_height: int) -> tuple[float, float, float, float]:
@@ -63,7 +65,12 @@ class App:
 
             shader_dir = SHADERS_DIR
             self.renderer = VulkanRenderer(self.window, shader_dir=shader_dir, sprite_atlas=SKETCH_HOPPER_ATLAS)
-            self.draw_list = DrawList(WINDOW_WIDTH, WINDOW_HEIGHT, white_uv=SKETCH_HOPPER_ATLAS.white_uv)
+            self.draw_list = DrawList(
+                WINDOW_WIDTH,
+                WINDOW_HEIGHT,
+                white_uv=SKETCH_HOPPER_ATLAS.white_uv,
+                font_glyphs=font_glyphs_from_atlas(SKETCH_HOPPER_ATLAS),
+            )
             self.games = GameRegistry(
                 (
                     GameDefinition(
@@ -86,16 +93,26 @@ class App:
 
     def run(self) -> None:
         last_time = time.perf_counter()
+        accumulator = 0.0
         while not glfw.window_should_close(self.window):
             glfw.poll_events()
             now = time.perf_counter()
-            dt = min(now - last_time, 1.0 / 20.0)
+            frame_time = min(now - last_time, MAX_FRAME_DT)
             last_time = now
+            accumulator += frame_time
 
-            replacement = self.scene.update(dt, self.inputs)
-            if replacement is not None:
-                self.scene = replacement
-                self.audio.play_music(self.scene.music_track())
+            consumed_inputs = False
+            while accumulator >= FIXED_DT:
+                replacement = self.scene.update(FIXED_DT, self.inputs)
+                accumulator -= FIXED_DT
+                if not consumed_inputs:
+                    self.inputs.end_frame()
+                    consumed_inputs = True
+                if replacement is not None:
+                    self.scene = replacement
+                    self.audio.play_music(self.scene.music_track())
+                    accumulator = 0.0
+                    break
 
             glfw.set_window_title(self.window, self.scene.window_title())
 
@@ -104,14 +121,13 @@ class App:
             self.scene.render(self.draw_list)
             self.renderer.render(self.draw_list.vertices)
 
-            self.inputs.end_frame()
-
     def close(self) -> None:
         try:
             if self.renderer is not None:
                 self.renderer.close()
                 self.renderer = None
         finally:
+            self.score_repository.close()
             self.audio.close()
             if self.window is not None:
                 glfw.destroy_window(self.window)

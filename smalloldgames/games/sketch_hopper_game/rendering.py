@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 
-from smalloldgames.engine import Lifetime, Position, Size, Velocity
 from smalloldgames.rendering.primitives import DrawList
 
 from .shared import (
@@ -133,12 +132,7 @@ class SketchHopperRenderingMixin:
                     world=True,
                 )
     def _render_pickups(self, draw: DrawList) -> None:
-        self._ensure_pickup_components()
-        for _, pickup, position, size in self.dynamic_world.query(Pickup, Position, Size):
-            pickup.x = position.x
-            pickup.y = position.y
-            pickup.width = size.width
-            pickup.height = size.height
+        for _, pickup in self.dynamic_world.components(Pickup).items():
             aura = (0.28, 0.77, 1.0, 0.10)
             sprite = JETPACK_SPRITE
             if pickup.kind == "boots":
@@ -153,58 +147,50 @@ class SketchHopperRenderingMixin:
             elif pickup.kind == "propeller":
                 aura = (1.0, 0.82, 0.36, 0.12)
                 sprite = PROPELLER_SPRITE
-            float_y = position.y + math.sin(self.animation_time * 2.6 + pickup.phase) * 4.0
+            float_y = pickup.y + math.sin(self.animation_time * 2.6 + pickup.phase) * 4.0
             draw.quad(
-                position.x - 6.0,
+                pickup.x - 6.0,
                 float_y - 4.0,
-                size.width + 12.0,
-                size.height + 10.0,
+                pickup.width + 12.0,
+                pickup.height + 10.0,
                 aura,
                 world=True,
             )
             draw.sprite(
-                position.x,
+                pickup.x,
                 float_y,
                 sprite,
-                width=size.width,
-                height=size.height,
+                width=pickup.width,
+                height=pickup.height,
                 world=True,
             )
     def _render_black_holes(self, draw: DrawList) -> None:
-        self._ensure_black_hole_components()
-        for _, hole, position, size in self.dynamic_world.query(BlackHole, Position, Size):
-            hole.x = position.x
-            hole.y = position.y
-            hole.width = size.width
-            hole.height = size.height
+        for _, hole in self.dynamic_world.components(BlackHole).items():
             pulse = 1.0 + 0.08 * math.sin(hole.pulse_phase)
             aura = 12.0 + 8.0 * (0.5 + 0.5 * math.sin(hole.pulse_phase))
             draw.quad(
-                position.x - aura * 0.5,
-                position.y - aura * 0.5,
-                size.width + aura,
-                size.height + aura,
+                hole.x - aura * 0.5,
+                hole.y - aura * 0.5,
+                hole.width + aura,
+                hole.height + aura,
                 (0.40, 0.18, 0.78, 0.10),
                 world=True,
             )
             draw.sprite(
-                position.x - size.width * (pulse - 1.0) * 0.5,
-                position.y - size.height * (pulse - 1.0) * 0.5,
+                hole.x - hole.width * (pulse - 1.0) * 0.5,
+                hole.y - hole.height * (pulse - 1.0) * 0.5,
                 BLACK_HOLE_SPRITE,
-                width=size.width * pulse,
-                height=size.height * pulse,
+                width=hole.width * pulse,
+                height=hole.height * pulse,
                 world=True,
             )
     def _render_clouds(self, draw: DrawList) -> None:
-        self._ensure_cloud_components()
-        for _, cloud, position in self.dynamic_world.query(Cloud, Position):
-            cloud.x = position.x
-            cloud.y = position.y
-            screen_y = position.y - self.camera_y * cloud.parallax
+        for _, cloud in self.dynamic_world.components(Cloud).items():
+            screen_y = cloud.y - self.camera_y * cloud.parallax
             if screen_y > draw.height + 120.0 or screen_y + cloud.height < -80.0:
                 continue
             draw.sprite(
-                position.x,
+                cloud.x,
                 screen_y,
                 CLOUD_SPRITE,
                 width=cloud.width,
@@ -212,25 +198,19 @@ class SketchHopperRenderingMixin:
                 world=False,
             )
     def _render_monsters(self, draw: DrawList) -> None:
-        self._ensure_monster_components()
-        for _, monster, position, velocity, size in self.dynamic_world.query(Monster, Position, Velocity, Size):
-            monster.x = position.x
-            monster.y = position.y
-            monster.width = size.width
-            monster.height = size.height
-            monster.velocity_x = velocity.vx
+        for _, monster in self.dynamic_world.components(Monster).items():
             sprite = UFO_SPRITE if monster.kind == "ufo" else MONSTER_SPRITE
-            y = position.y
+            y = monster.y
             if monster.kind == "ufo":
-                y += math.sin(self.animation_time * 3.2 + position.x * 0.02) * 5.0
+                y += math.sin(self.animation_time * 3.2 + monster.x * 0.02) * 5.0
             draw.sprite(
-                position.x,
+                monster.x,
                 y,
                 sprite,
-                width=size.width,
-                height=size.height,
+                width=monster.width,
+                height=monster.height,
                 world=True,
-                flip_x=velocity.vx < 0.0,
+                flip_x=monster.velocity_x < 0.0,
             )
     def _render_projectiles(self, draw: DrawList) -> None:
         for projectile in self.projectiles:
@@ -339,18 +319,14 @@ class SketchHopperRenderingMixin:
         draw.text(488, 919, theme_name, scale=1.5, color=(0.94, 0.96, 0.98, 1.0), world=False, centered=True)
         draw.text(488, 903, f"STAGE {self.theme_index + 1}", scale=1.5, color=accent, world=False, centered=True)
     def _render_impacts(self, draw: DrawList) -> None:
-        self._ensure_impact_components()
-        for _, effect, position, lifetime in self.dynamic_world.query(ImpactEffect, Position, Lifetime):
-            effect.x = position.x
-            effect.y = position.y
-            effect.timer = lifetime.remaining
+        for _, effect in self.dynamic_world.components(ImpactEffect).items():
             t = effect.timer / effect.duration
             radius = 10.0 + (1.0 - t) * 18.0
             alpha = effect.color[3] * t
-            draw.quad(position.x - radius * 0.5, position.y - 3.0, radius, 6.0, (effect.color[0], effect.color[1], effect.color[2], alpha), world=True)
-            draw.quad(position.x - 3.0, position.y - radius * 0.5, 6.0, radius, (effect.color[0], effect.color[1], effect.color[2], alpha), world=True)
+            draw.quad(effect.x - radius * 0.5, effect.y - 3.0, radius, 6.0, (effect.color[0], effect.color[1], effect.color[2], alpha), world=True)
+            draw.quad(effect.x - 3.0, effect.y - radius * 0.5, 6.0, radius, (effect.color[0], effect.color[1], effect.color[2], alpha), world=True)
             if effect.text:
-                draw.text(position.x, position.y + 10.0 + (1.0 - t) * 10.0, effect.text, scale=1.5, color=(effect.color[0], effect.color[1], effect.color[2], alpha), world=True, centered=True)
+                draw.text(effect.x, effect.y + 10.0 + (1.0 - t) * 10.0, effect.text, scale=1.5, color=(effect.color[0], effect.color[1], effect.color[2], alpha), world=True, centered=True)
     def _render_game_over(self, draw: DrawList) -> None:
         draw.quad(52, 330, 436, 250, (0.10, 0.12, 0.16, 0.78), world=False)
         draw.text(draw.width * 0.5, 510, "RUN OVER", scale=5, color=(0.97, 0.98, 0.97, 1.0), centered=True)

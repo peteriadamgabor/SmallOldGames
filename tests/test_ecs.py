@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from smalloldgames.engine import ComponentListProxy, Lifetime, Position, Size, Velocity, World
+from smalloldgames.engine import ComponentListProxy, World
 from smalloldgames.games.sketch_hopper import BlackHole, Cloud, ImpactEffect, Monster, Pickup
 from smalloldgames.games.sketch_hopper import SketchHopperScene
 
@@ -39,39 +39,35 @@ class WorldTests(unittest.TestCase):
         self.assertEqual(len(scene.dynamic_world.components(Cloud)), len(scene.clouds))
         self.assertEqual(len(scene.dynamic_world.components(ImpactEffect)), len(scene.impact_effects))
 
-    def test_internal_projectile_spawn_adds_reusable_components(self) -> None:
+    def test_internal_projectile_spawn_adds_projectile_entity(self) -> None:
         scene = SketchHopperScene(lambda: None, seed=7)
 
         scene._shoot()
-        rows = list(scene.dynamic_world.query(scene.projectiles.component_type, Position, Velocity))
+        rows = list(scene.dynamic_world.query(scene.projectiles.component_type))
 
         self.assertEqual(len(rows), 1)
 
-    def test_internal_impact_spawn_adds_reusable_components(self) -> None:
+    def test_internal_impact_spawn_adds_impact_entity(self) -> None:
         scene = SketchHopperScene(lambda: None, seed=7)
 
         scene._spawn_impact(20.0, 30.0, (1.0, 1.0, 1.0, 1.0))
-        rows = list(scene.dynamic_world.query(ImpactEffect, Position, Lifetime))
+        rows = list(scene.dynamic_world.query(ImpactEffect))
 
         self.assertEqual(len(rows), 1)
 
-    def test_monster_pickup_and_black_hole_entities_add_shared_components(self) -> None:
+    def test_monster_pickup_and_black_hole_entities_use_domain_objects_as_world_state(self) -> None:
         scene = SketchHopperScene(lambda: None, seed=7)
-        initial_monsters = len(list(scene.dynamic_world.query(Monster, Position, Velocity, Size)))
-        initial_pickups = len(list(scene.dynamic_world.query(Pickup, Position, Size)))
-        initial_black_holes = len(list(scene.dynamic_world.query(BlackHole, Position, Size)))
+        initial_monsters = len(list(scene.dynamic_world.query(Monster)))
+        initial_pickups = len(list(scene.dynamic_world.query(Pickup)))
+        initial_black_holes = len(list(scene.dynamic_world.query(BlackHole)))
 
         scene.monsters.append(Monster(x=10.0, y=20.0, width=30.0, height=18.0, velocity_x=5.0))
         scene.pickups.append(Pickup(x=30.0, y=40.0, width=20.0, height=24.0, kind="jetpack"))
         scene.black_holes.append(BlackHole(x=50.0, y=60.0, width=32.0, height=32.0, pulse_phase=0.0, pulse_speed=1.0))
 
-        scene._ensure_monster_components()
-        scene._ensure_pickup_components()
-        scene._ensure_black_hole_components()
-
-        self.assertEqual(len(list(scene.dynamic_world.query(Monster, Position, Velocity, Size))), initial_monsters + 1)
-        self.assertEqual(len(list(scene.dynamic_world.query(Pickup, Position, Size))), initial_pickups + 1)
-        self.assertEqual(len(list(scene.dynamic_world.query(BlackHole, Position, Size))), initial_black_holes + 1)
+        self.assertEqual(len(list(scene.dynamic_world.query(Monster))), initial_monsters + 1)
+        self.assertEqual(len(list(scene.dynamic_world.query(Pickup))), initial_pickups + 1)
+        self.assertEqual(len(list(scene.dynamic_world.query(BlackHole))), initial_black_holes + 1)
 
 
 if __name__ == "__main__":

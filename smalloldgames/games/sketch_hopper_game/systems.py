@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import math
 
-from smalloldgames.engine import Lifetime, Position, Size, Velocity
-
 from .shared import BlackHole, Cloud, Color, ImpactEffect, Monster, Pickup, Platform, Projectile, THEMES
 
 
@@ -23,109 +21,23 @@ class SketchHopperSystemsMixin:
     def _black_hole_components(self) -> list[BlackHole]:
         return list(self.dynamic_world.components(BlackHole).values())
 
-    def _ensure_projectile_components(self) -> None:
-        positions = self.dynamic_world.components(Position)
-        velocities = self.dynamic_world.components(Velocity)
-        sizes = self.dynamic_world.components(Size)
-        for entity_id, projectile in self.dynamic_world.components(Projectile).items():
-            if entity_id not in positions:
-                self.dynamic_world.add_component(entity_id, Position(projectile.x, projectile.y))
-            if entity_id not in velocities:
-                self.dynamic_world.add_component(entity_id, Velocity(vy=projectile.velocity_y))
-            if entity_id not in sizes:
-                self.dynamic_world.add_component(entity_id, Size(projectile.width, projectile.height))
-
-    def _ensure_monster_components(self) -> None:
-        positions = self.dynamic_world.components(Position)
-        velocities = self.dynamic_world.components(Velocity)
-        sizes = self.dynamic_world.components(Size)
-        for entity_id, monster in self.dynamic_world.components(Monster).items():
-            if entity_id not in positions:
-                self.dynamic_world.add_component(entity_id, Position(monster.x, monster.y))
-            if entity_id not in velocities:
-                self.dynamic_world.add_component(entity_id, Velocity(vx=monster.velocity_x))
-            if entity_id not in sizes:
-                self.dynamic_world.add_component(entity_id, Size(monster.width, monster.height))
-
-    def _ensure_pickup_components(self) -> None:
-        positions = self.dynamic_world.components(Position)
-        sizes = self.dynamic_world.components(Size)
-        for entity_id, pickup in self.dynamic_world.components(Pickup).items():
-            if entity_id not in positions:
-                self.dynamic_world.add_component(entity_id, Position(pickup.x, pickup.y))
-            if entity_id not in sizes:
-                self.dynamic_world.add_component(entity_id, Size(pickup.width, pickup.height))
-
-    def _ensure_black_hole_components(self) -> None:
-        positions = self.dynamic_world.components(Position)
-        sizes = self.dynamic_world.components(Size)
-        for entity_id, hole in self.dynamic_world.components(BlackHole).items():
-            if entity_id not in positions:
-                self.dynamic_world.add_component(entity_id, Position(hole.x, hole.y))
-            if entity_id not in sizes:
-                self.dynamic_world.add_component(entity_id, Size(hole.width, hole.height))
-
-    def _ensure_cloud_components(self) -> None:
-        positions = self.dynamic_world.components(Position)
-        velocities = self.dynamic_world.components(Velocity)
-        for entity_id, cloud in self.dynamic_world.components(Cloud).items():
-            if entity_id not in positions:
-                self.dynamic_world.add_component(entity_id, Position(cloud.x, cloud.y))
-            if entity_id not in velocities:
-                self.dynamic_world.add_component(entity_id, Velocity(vx=cloud.drift_x))
-
-    def _ensure_impact_components(self) -> None:
-        positions = self.dynamic_world.components(Position)
-        lifetimes = self.dynamic_world.components(Lifetime)
-        for entity_id, effect in self.dynamic_world.components(ImpactEffect).items():
-            if entity_id not in positions:
-                self.dynamic_world.add_component(entity_id, Position(effect.x, effect.y))
-            if entity_id not in lifetimes:
-                self.dynamic_world.add_component(entity_id, Lifetime(effect.timer))
-
     def _spawn_projectile_entity(self, projectile: Projectile) -> None:
-        self.dynamic_world.create(
-            projectile,
-            Position(projectile.x, projectile.y),
-            Size(projectile.width, projectile.height),
-            Velocity(vy=projectile.velocity_y),
-        )
+        self.dynamic_world.create(projectile)
 
     def _spawn_monster_entity(self, monster: Monster) -> None:
-        self.dynamic_world.create(
-            monster,
-            Position(monster.x, monster.y),
-            Size(monster.width, monster.height),
-            Velocity(vx=monster.velocity_x),
-        )
+        self.dynamic_world.create(monster)
 
     def _spawn_pickup_entity(self, pickup: Pickup) -> None:
-        self.dynamic_world.create(
-            pickup,
-            Position(pickup.x, pickup.y),
-            Size(pickup.width, pickup.height),
-        )
+        self.dynamic_world.create(pickup)
 
     def _spawn_black_hole_entity(self, hole: BlackHole) -> None:
-        self.dynamic_world.create(
-            hole,
-            Position(hole.x, hole.y),
-            Size(hole.width, hole.height),
-        )
+        self.dynamic_world.create(hole)
 
     def _spawn_cloud_entity(self, cloud: Cloud) -> None:
-        self.dynamic_world.create(
-            cloud,
-            Position(cloud.x, cloud.y),
-            Velocity(vx=cloud.drift_x),
-        )
+        self.dynamic_world.create(cloud)
 
     def _spawn_impact_entity(self, effect: ImpactEffect) -> None:
-        self.dynamic_world.create(
-            effect,
-            Position(effect.x, effect.y),
-            Lifetime(effect.timer),
-        )
+        self.dynamic_world.create(effect)
 
     def _build_initial_platforms(self) -> None:
         y = self.initial_platform_start_y
@@ -171,47 +83,32 @@ class SketchHopperSystemsMixin:
                 platform.x = self.world_width - platform.width
                 platform.velocity_x *= -1.0
     def _tick_monsters(self, dt: float) -> None:
-        self._ensure_monster_components()
-        for _, monster, position, velocity, size in self.dynamic_world.query(Monster, Position, Velocity, Size):
-            position.x += velocity.vx * dt
-            if position.x <= 0.0:
-                position.x = 0.0
-                velocity.vx *= -1.0
-            if position.x + size.width >= self.world_width:
-                position.x = self.world_width - size.width
-                velocity.vx *= -1.0
+        for _, monster in self.dynamic_world.components(Monster).items():
+            monster.x += monster.velocity_x * dt
+            if monster.x <= 0.0:
+                monster.x = 0.0
+                monster.velocity_x *= -1.0
+            if monster.x + monster.width >= self.world_width:
+                monster.x = self.world_width - monster.width
+                monster.velocity_x *= -1.0
             if monster.bob_amplitude > 0.0:
                 monster.bob_phase += monster.bob_speed * dt
-                position.y = monster.base_y + math.sin(monster.bob_phase) * monster.bob_amplitude
+                monster.y = monster.base_y + math.sin(monster.bob_phase) * monster.bob_amplitude
             if monster.kind == "ufo":
                 monster.shot_timer = max(0.0, monster.shot_timer - dt)
                 if (
                     monster.shot_timer == 0.0
-                    and position.y >= self.ufo_shot_min_height
-                    and position.y > self.player.y + 90.0
-                    and abs((position.x + size.width * 0.5) - (self.player.x + self.player.width * 0.5)) < 120.0
+                    and monster.y >= self.ufo_shot_min_height
+                    and monster.y > self.player.y + 90.0
+                    and abs((monster.x + monster.width * 0.5) - (self.player.x + self.player.width * 0.5)) < 120.0
                 ):
-                    monster.x = position.x
-                    monster.y = position.y
-                    monster.width = size.width
-                    monster.height = size.height
-                    monster.velocity_x = velocity.vx
                     self._spawn_enemy_projectile(monster)
                     monster.shot_timer = self.random.uniform(self.ufo_shot_interval_min, self.ufo_shot_interval_max)
-            monster.x = position.x
-            monster.y = position.y
-            monster.width = size.width
-            monster.height = size.height
-            monster.velocity_x = velocity.vx
     def _tick_projectiles(self, dt: float) -> None:
-        self._ensure_projectile_components()
         surviving_monsters = list(self.monsters)
         dead_projectiles: list[int] = []
-        for entity_id, projectile, position, velocity in self.dynamic_world.query(Projectile, Position, Velocity):
-            position.y += velocity.vy * dt
-            projectile.x = position.x
-            projectile.y = position.y
-            projectile.velocity_y = velocity.vy
+        for entity_id, projectile in self.dynamic_world.components(Projectile).items():
+            projectile.y += projectile.velocity_y * dt
             if projectile.hostile:
                 if self._intersects(
                     projectile.x,
@@ -263,24 +160,18 @@ class SketchHopperSystemsMixin:
         for entity_id in dead_projectiles:
             self.dynamic_world.remove_entity(entity_id)
         self.monsters = surviving_monsters
+
     def _tick_clouds(self, dt: float) -> None:
-        self._ensure_cloud_components()
-        for _, cloud, position, velocity in self.dynamic_world.query(Cloud, Position, Velocity):
-            position.x += velocity.vx * dt
-            if position.x > self.world_width + 24.0:
-                position.x = -cloud.width - 24.0
-            elif position.x + cloud.width < -24.0:
-                position.x = self.world_width + 24.0
-            cloud.x = position.x
-            cloud.y = position.y
+        for _, cloud in self.dynamic_world.components(Cloud).items():
+            cloud.x += cloud.drift_x * dt
+            if cloud.x > self.world_width + 24.0:
+                cloud.x = -cloud.width - 24.0
+            elif cloud.x + cloud.width < -24.0:
+                cloud.x = self.world_width + 24.0
+
     def _tick_black_holes(self, dt: float) -> None:
-        self._ensure_black_hole_components()
-        for _, hole, position, size in self.dynamic_world.query(BlackHole, Position, Size):
+        for _, hole in self.dynamic_world.components(BlackHole).items():
             hole.pulse_phase += hole.pulse_speed * dt
-            hole.x = position.x
-            hole.y = position.y
-            hole.width = size.width
-            hole.height = size.height
     def _tick_player(self, dt: float, move_axis: float) -> None:
         boost_velocity = 0.0
         if self.rocket_timer > 0.0:
@@ -411,7 +302,6 @@ class SketchHopperSystemsMixin:
                 continue
             self._append_monster(self.highest_monster_y, kind="monster")
 
-        self._ensure_monster_components()
         visible_monsters = [
             monster
             for monster in self._monster_components()
@@ -428,7 +318,6 @@ class SketchHopperSystemsMixin:
             y = self.camera_y + self.world_height * self.monster_top_up_start_ratio + attempts * self.monster_top_up_step_y
             self.highest_monster_y = max(self.highest_monster_y, y)
             self._append_monster(y, kind="monster")
-            self._ensure_monster_components()
             visible_monsters = [
                 monster
                 for monster in self._monster_components()
@@ -575,7 +464,6 @@ class SketchHopperSystemsMixin:
         pickup_y = platform.y + platform.height + self.pickup_spawn_offset_y
         if not self._pickup_has_gap(pickup_x, pickup_y):
             return
-        self._ensure_pickup_components()
         if any(
             abs(existing.x - pickup_x) < self.pickup_overlap_x
             and abs(existing.y - pickup_y) < self.pickup_overlap_y
@@ -587,7 +475,6 @@ class SketchHopperSystemsMixin:
         if self.camera_y < self.pickup_top_up_min_camera_y:
             return
 
-        self._ensure_pickup_components()
         visible_pickups = [
             pickup
             for pickup in self._pickup_components()
@@ -682,7 +569,6 @@ class SketchHopperSystemsMixin:
             return (self.propeller_width, self.propeller_height)
         return (self.jetpack_width, self.jetpack_height)
     def _pickup_has_gap(self, pickup_x: float, pickup_y: float) -> bool:
-        self._ensure_pickup_components()
         return not any(
             abs(existing.x - pickup_x) < self.pickup_overlap_x
             and abs(existing.y - pickup_y) < self.pickup_min_gap_y
@@ -747,11 +633,8 @@ class SketchHopperSystemsMixin:
             if platform.y + platform.height >= floor and (not platform.broken or platform.state_timer > 0.0)
         ]
     def _trim_clouds(self) -> None:
-        self._ensure_cloud_components()
         dead_entities: list[int] = []
-        for entity_id, cloud, position in self.dynamic_world.query(Cloud, Position):
-            cloud.x = position.x
-            cloud.y = position.y
+        for entity_id, cloud in self.dynamic_world.components(Cloud).items():
             if cloud.y + cloud.height < cloud.parallax * self.camera_y - 160.0:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
@@ -759,56 +642,36 @@ class SketchHopperSystemsMixin:
     def _trim_pickups(self) -> None:
         floor = self.camera_y - 120.0
         ceiling = self.camera_y + self.world_height + 120.0
-        self._ensure_pickup_components()
         dead_entities: list[int] = []
-        for entity_id, pickup, position, size in self.dynamic_world.query(Pickup, Position, Size):
-            pickup.x = position.x
-            pickup.y = position.y
-            pickup.width = size.width
-            pickup.height = size.height
-            if position.y + size.height < floor or position.y > ceiling:
+        for entity_id, pickup in self.dynamic_world.components(Pickup).items():
+            if pickup.y + pickup.height < floor or pickup.y > ceiling:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
     def _trim_black_holes(self) -> None:
         floor = self.camera_y - 220.0
         ceiling = self.camera_y + self.world_height + 220.0
-        self._ensure_black_hole_components()
         dead_entities: list[int] = []
-        for entity_id, hole, position, size in self.dynamic_world.query(BlackHole, Position, Size):
-            hole.x = position.x
-            hole.y = position.y
-            hole.width = size.width
-            hole.height = size.height
-            if position.y + size.height < floor or position.y > ceiling:
+        for entity_id, hole in self.dynamic_world.components(BlackHole).items():
+            if hole.y + hole.height < floor or hole.y > ceiling:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
     def _trim_monsters(self) -> None:
         floor = self.camera_y - 220.0
         ceiling = self.camera_y + self.world_height + 260.0
-        self._ensure_monster_components()
         dead_entities: list[int] = []
-        for entity_id, monster, position, size in self.dynamic_world.query(Monster, Position, Size):
-            monster.x = position.x
-            monster.y = position.y
-            monster.width = size.width
-            monster.height = size.height
-            if position.y + size.height < floor or position.y > ceiling:
+        for entity_id, monster in self.dynamic_world.components(Monster).items():
+            if monster.y + monster.height < floor or monster.y > ceiling:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
     def _trim_projectiles(self) -> None:
         floor = self.camera_y - 40.0
         ceiling = self.camera_y + self.world_height + 80.0
-        self._ensure_projectile_components()
         dead_entities: list[int] = []
-        for entity_id, projectile, position, size in self.dynamic_world.query(Projectile, Position, Size):
-            projectile.x = position.x
-            projectile.y = position.y
-            projectile.width = size.width
-            projectile.height = size.height
-            if position.y + size.height < floor or position.y > ceiling:
+        for entity_id, projectile in self.dynamic_world.components(Projectile).items():
+            if projectile.y + projectile.height < floor or projectile.y > ceiling:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
@@ -877,22 +740,17 @@ class SketchHopperSystemsMixin:
         self.latest_rank = self.score_repository.record_score("sketch_hopper", self.score, player_name=self.player_name)
         self.best_score = self.score_repository.best_score("sketch_hopper")
     def _handle_pickups(self) -> None:
-        self._ensure_pickup_components()
         consumed_entities: list[int] = []
-        for entity_id, pickup, position, size in self.dynamic_world.query(Pickup, Position, Size):
-            pickup.x = position.x
-            pickup.y = position.y
-            pickup.width = size.width
-            pickup.height = size.height
+        for entity_id, pickup in self.dynamic_world.components(Pickup).items():
             if self._intersects(
                 self.player.x,
                 self.player.y,
                 self.player.width,
                 self.player.height,
-                position.x,
-                position.y,
-                size.width,
-                size.height,
+                pickup.x,
+                pickup.y,
+                pickup.width,
+                pickup.height,
             ):
                 if pickup.kind == "jetpack":
                     self.jetpack_timer = self.jetpack_duration
@@ -926,25 +784,20 @@ class SketchHopperSystemsMixin:
                     self._play_sound("propeller")
                     self._trigger_feedback("PROPELLER", (0.98, 0.84, 0.28, 0.92), shake=4.0)
                     self.player_stretch_timer = 0.18
-                self._spawn_impact(position.x + size.width * 0.5, position.y + size.height * 0.5, (0.92, 0.94, 0.98, 0.88))
+                self._spawn_impact(pickup.x + pickup.width * 0.5, pickup.y + pickup.height * 0.5, (0.92, 0.94, 0.98, 0.88))
                 consumed_entities.append(entity_id)
         for entity_id in consumed_entities:
             self.dynamic_world.remove_entity(entity_id)
     def _apply_black_holes(self, dt: float) -> None:
         player_cx = self.player.x + self.player.width * 0.5
         player_cy = self.player.y + self.player.height * 0.5
-        self._ensure_black_hole_components()
-        for _, hole, position, size in self.dynamic_world.query(BlackHole, Position, Size):
-            hole.x = position.x
-            hole.y = position.y
-            hole.width = size.width
-            hole.height = size.height
-            hole_cx = position.x + size.width * 0.5
-            hole_cy = position.y + size.height * 0.5
+        for _, hole in self.dynamic_world.components(BlackHole).items():
+            hole_cx = hole.x + hole.width * 0.5
+            hole_cy = hole.y + hole.height * 0.5
             dx = hole_cx - player_cx
             dy = hole_cy - player_cy
             distance = math.hypot(dx, dy)
-            if distance <= size.width * 0.28:
+            if distance <= hole.width * 0.28:
                 if self._consume_shield("WARP SAVED"):
                     if distance > 0.0:
                         away_x = -dx / distance
@@ -952,7 +805,7 @@ class SketchHopperSystemsMixin:
                     else:
                         away_x = 0.0
                         away_y = 1.0
-                    escape_distance = max(self.player.width, self.player.height) * 0.5 + max(size.width, size.height) * 0.5 + 12.0
+                    escape_distance = max(self.player.width, self.player.height) * 0.5 + max(hole.width, hole.height) * 0.5 + 12.0
                     player_cx = hole_cx + away_x * escape_distance
                     player_cy = hole_cy + away_y * escape_distance
                     self.player.x = (player_cx - self.player.width * 0.5) % self.world_width
@@ -971,22 +824,16 @@ class SketchHopperSystemsMixin:
         if self.audio is not None:
             self.audio.play(effect_name)
     def _handle_monster_collisions(self) -> None:
-        self._ensure_monster_components()
-        for entity_id, monster, position, velocity, size in self.dynamic_world.query(Monster, Position, Velocity, Size):
-            monster.x = position.x
-            monster.y = position.y
-            monster.width = size.width
-            monster.height = size.height
-            monster.velocity_x = velocity.vx
+        for entity_id, monster in self.dynamic_world.components(Monster).items():
             if self._intersects(
                 self.player.x,
                 self.player.y,
                 self.player.width,
                 self.player.height,
-                position.x,
-                position.y,
-                size.width,
-                size.height,
+                monster.x,
+                monster.y,
+                monster.width,
+                monster.height,
             ):
                 if self._consume_shield("SHIELD BLOCK"):
                     self.dynamic_world.remove_entity(entity_id)
@@ -1007,12 +854,10 @@ class SketchHopperSystemsMixin:
         self.player_squash_timer = max(0.0, self.player_squash_timer - dt)
         self.player_stretch_timer = max(0.0, self.player_stretch_timer - dt)
         self.theme_transition_timer = max(0.0, self.theme_transition_timer - dt)
-        self._ensure_impact_components()
         dead_entities: list[int] = []
-        for entity_id, effect, lifetime in self.dynamic_world.query(ImpactEffect, Lifetime):
-            lifetime.remaining = max(0.0, lifetime.remaining - dt)
-            effect.timer = lifetime.remaining
-            if lifetime.remaining == 0.0:
+        for entity_id, effect in self.dynamic_world.components(ImpactEffect).items():
+            effect.timer = max(0.0, effect.timer - dt)
+            if effect.timer == 0.0:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)

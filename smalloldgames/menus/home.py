@@ -4,6 +4,7 @@ import glfw
 
 from smalloldgames.engine import GameDefinition
 from smalloldgames.engine import InputState
+from smalloldgames.engine import Scene
 from smalloldgames.rendering.primitives import DrawList
 from smalloldgames.data.storage import ScoreRepository
 
@@ -37,7 +38,7 @@ class LauncherScene:
         self.player_name = self._load_player_name()
         self.stats_by_game = {game.id: self._load_stats(game.score_key) for game in self.games}
 
-    def update(self, _: float, inputs: InputState) -> object | None:
+    def update(self, _: float, inputs: InputState) -> Scene | None:
         if inputs.pointer_pressed:
             for index, game in enumerate(self.games):
                 if inputs.pointer_in_rect(*self._game_card_rect(index)):

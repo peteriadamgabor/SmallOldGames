@@ -14,6 +14,7 @@ class DrawList:
     width: int
     height: int
     white_uv: tuple[float, float]
+    font_glyphs: dict[str, PackedSprite] = field(default_factory=dict)
     camera_y: float = 0.0
     vertices: array = field(default_factory=lambda: array("f"))
 
@@ -21,7 +22,7 @@ class DrawList:
         self.camera_y = camera_y
 
     def clear(self) -> None:
-        self.vertices = array("f")
+        del self.vertices[:]
 
     def gradient_quad(
         self,
@@ -98,18 +99,14 @@ class DrawList:
             x -= self.measure_text(text, scale=scale) * 0.5
         cursor_x = x
         for character in text:
-            glyph = FONT_5X7[character]
-            for row_index, row in enumerate(glyph):
-                for col_index, bit in enumerate(row):
-                    if bit == "1":
-                        self.quad(
-                            cursor_x + col_index * scale,
-                            y + (6 - row_index) * scale,
-                            scale,
-                            scale,
-                            color,
-                            world=world,
-                        )
+            if character == " ":
+                cursor_x += 6 * scale
+                continue
+            sprite = self.font_glyphs.get(character)
+            if sprite is None:
+                self._draw_bitmap_glyph(cursor_x, y, FONT_5X7[character], scale=scale, color=color, world=world)
+            else:
+                self._textured_quad(cursor_x, y, 5 * scale, 7 * scale, color, sprite, world=world)
             cursor_x += 6 * scale
 
     def sprite(
@@ -123,17 +120,7 @@ class DrawList:
         world: bool = True,
         flip_x: bool = False,
     ) -> None:
-        x0, y0 = self._to_ndc(x, y, world)
-        x1, y1 = self._to_ndc(x + width, y + height, world)
-        u0, u1 = (sprite.u1, sprite.u0) if flip_x else (sprite.u0, sprite.u1)
-        v0, v1 = sprite.v1, sprite.v0
-        color = (1.0, 1.0, 1.0, 1.0)
-        self._push_vertex(x0, y0, color, (u0, v0))
-        self._push_vertex(x1, y0, color, (u1, v0))
-        self._push_vertex(x1, y1, color, (u1, v1))
-        self._push_vertex(x0, y0, color, (u0, v0))
-        self._push_vertex(x1, y1, color, (u1, v1))
-        self._push_vertex(x0, y1, color, (u0, v1))
+        self._textured_quad(x, y, width, height, (1.0, 1.0, 1.0, 1.0), sprite, world=world, flip_x=flip_x)
 
     @staticmethod
     def measure_text(value: str, *, scale: float) -> float:
@@ -141,6 +128,51 @@ class DrawList:
 
     def _push_vertex(self, x: float, y: float, color: Color, uv: tuple[float, float]) -> None:
         self.vertices.extend((x, y, *color, *uv))
+
+    def _draw_bitmap_glyph(
+        self,
+        x: float,
+        y: float,
+        glyph: tuple[str, ...],
+        *,
+        scale: float,
+        color: Color,
+        world: bool,
+    ) -> None:
+        for row_index, row in enumerate(glyph):
+            for col_index, bit in enumerate(row):
+                if bit == "1":
+                    self.quad(
+                        x + col_index * scale,
+                        y + (6 - row_index) * scale,
+                        scale,
+                        scale,
+                        color,
+                        world=world,
+                    )
+
+    def _textured_quad(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        color: Color,
+        sprite: PackedSprite,
+        *,
+        world: bool,
+        flip_x: bool = False,
+    ) -> None:
+        x0, y0 = self._to_ndc(x, y, world)
+        x1, y1 = self._to_ndc(x + width, y + height, world)
+        u0, u1 = (sprite.u1, sprite.u0) if flip_x else (sprite.u0, sprite.u1)
+        v0, v1 = sprite.v1, sprite.v0
+        self._push_vertex(x0, y0, color, (u0, v0))
+        self._push_vertex(x1, y0, color, (u1, v0))
+        self._push_vertex(x1, y1, color, (u1, v1))
+        self._push_vertex(x0, y0, color, (u0, v0))
+        self._push_vertex(x1, y1, color, (u1, v1))
+        self._push_vertex(x0, y1, color, (u0, v1))
 
     def _to_ndc(self, x: float, y: float, world: bool) -> tuple[float, float]:
         screen_y = y - self.camera_y if world else y

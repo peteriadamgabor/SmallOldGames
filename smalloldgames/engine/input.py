@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+ACTION_RELEASE = 0
+ACTION_PRESS = 1
+ACTION_REPEAT = 2
+
 
 @dataclass(slots=True)
 class InputState:
@@ -17,14 +21,14 @@ class InputState:
     def on_key(self, key: int, action: int) -> None:
         if key < 0:
             return
-        if action == 1:
+        if action == ACTION_PRESS:
             if key not in self.held:
                 self.pressed.add(key)
             self.held.add(key)
-        elif action == 0:
+        elif action == ACTION_RELEASE:
             self.held.discard(key)
             self.released.add(key)
-        elif action == 2:
+        elif action == ACTION_REPEAT:
             self.held.add(key)
 
     def is_down(self, key: int) -> bool:
@@ -43,11 +47,11 @@ class InputState:
         self.pointer_y = y
 
     def on_pointer(self, action: int) -> None:
-        if action == 1:
+        if action == ACTION_PRESS:
             if not self.pointer_down:
                 self.pointer_pressed = True
             self.pointer_down = True
-        elif action == 0:
+        elif action == ACTION_RELEASE:
             self.pointer_down = False
             self.pointer_released = True
 

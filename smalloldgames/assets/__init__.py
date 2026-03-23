@@ -1,7 +1,7 @@
 """Static rendering assets and asset-loading helpers."""
 
 from .catalog import CONFIG_DIR, PROJECT_ASSETS_DIR, PROJECT_ROOT, SHADERS_DIR, SPRITES_DIR
-from .sprites import PackedSprite, Sprite, SpriteAtlas, build_sprite_atlas, load_xpm
+from .sprites import PackedSprite, Sprite, SpriteAtlas, build_sprite_atlas, font_glyphs_from_atlas, load_xpm
 
 __all__ = [
     "CONFIG_DIR",
@@ -13,5 +13,6 @@ __all__ = [
     "Sprite",
     "SpriteAtlas",
     "build_sprite_atlas",
+    "font_glyphs_from_atlas",
     "load_xpm",
 ]

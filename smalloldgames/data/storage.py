@@ -27,10 +27,13 @@ def default_database_path() -> Path:
 class ScoreRepository:
     def __init__(self, database_path: str | Path | None = None) -> None:
         self.database_path = Path(database_path) if database_path is not None else default_database_path()
+        self._db: sqlite3.Connection | None = None
         try:
             self.database_path.parent.mkdir(parents=True, exist_ok=True)
+            self._db = sqlite3.connect(self.database_path)
             self._initialize()
         except (OSError, sqlite3.Error) as error:
+            self.close()
             raise RuntimeError(f"Could not open scoreboard database: {error}") from error
 
     def record_score(self, game: str, score: int, *, player_name: str | None = None) -> int:
@@ -155,7 +158,9 @@ class ScoreRepository:
             )
 
     def _connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.database_path)
+        if self._db is None:
+            raise RuntimeError("Score repository is closed.")
+        return self._db
 
     @contextmanager
     def _connection(self):
@@ -166,8 +171,18 @@ class ScoreRepository:
         except Exception:
             connection.rollback()
             raise
-        finally:
-            connection.close()
+
+    def close(self) -> None:
+        if self._db is None:
+            return
+        self._db.close()
+        self._db = None
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
 
     @staticmethod
     def _normalize_player_name(player_name: str) -> str:

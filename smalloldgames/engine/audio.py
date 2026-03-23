@@ -12,6 +12,7 @@ import wave
 
 
 _SAMPLE_RATE = 22_050
+_MAX_ACTIVE_EFFECTS = 8
 
 _EFFECTS: dict[str, tuple[tuple[float, float, float], ...]] = {
     "jump": ((720.0, 0.06, 0.35), (860.0, 0.04, 0.28)),
@@ -70,6 +71,7 @@ class AudioEngine:
         self._music_process: subprocess.Popen[bytes] | None = None
         self._current_music: str | None = None
         self._requested_music: str | None = None
+        self._active_effects: list[subprocess.Popen[bytes]] = []
 
     def play(self, effect_name: str) -> None:
         if not self.enabled:
@@ -84,11 +86,15 @@ class AudioEngine:
             return
         if self._player is None:
             return
+        self._reap_effects()
+        if len(self._active_effects) >= _MAX_ACTIVE_EFFECTS:
+            return
         command = [*self._player, str(sound_path)]
         try:
-            subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except OSError:
             return
+        self._active_effects.append(process)
 
     def play_music(self, track_name: str | None) -> None:
         self._requested_music = track_name
@@ -133,12 +139,14 @@ class AudioEngine:
 
     def close(self) -> None:
         self.stop_music()
+        self._stop_effects()
         shutil.rmtree(self._effects_dir, ignore_errors=True)
 
     def set_enabled(self, enabled: bool) -> None:
         self.enabled = enabled
         if not enabled:
             self.stop_music()
+            self._stop_effects()
         elif self._requested_music is not None:
             self.play_music(self._requested_music)
 
@@ -176,6 +184,21 @@ class AudioEngine:
                         self._music_process = None
             if self._music_stop.wait(0.05):
                 break
+
+    def _reap_effects(self) -> None:
+        self._active_effects = [process for process in self._active_effects if process.poll() is None]
+
+    def _stop_effects(self) -> None:
+        for process in self._active_effects:
+            if process.poll() is None:
+                try:
+                    process.terminate()
+                    process.wait(timeout=0.1)
+                except subprocess.TimeoutExpired:
+                    pass
+                except OSError:
+                    pass
+        self._reap_effects()
 
     def _ensure_effect(self, effect_name: str, segments: tuple[tuple[float, float, float], ...]) -> Path:
         sound_path = self._effects_dir / f"{effect_name}.wav"

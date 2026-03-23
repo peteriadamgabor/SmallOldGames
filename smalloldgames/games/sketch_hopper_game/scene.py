@@ -8,6 +8,7 @@ import glfw
 from smalloldgames.data.storage import ScoreRepository
 from smalloldgames.engine import ComponentListProxy, World
 from smalloldgames.engine import InputState
+from smalloldgames.engine import Scene
 from smalloldgames.engine.audio import AudioEngine
 from smalloldgames.rendering.primitives import DrawList
 
@@ -63,7 +64,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
 
     def __init__(
         self,
-        on_exit: Callable[[], object],
+        on_exit: Callable[[], Scene],
         *,
         config: SketchHopperConfig | None = None,
         score_repository: ScoreRepository | None = None,
@@ -208,7 +209,8 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         self.player_stretch_timer = 0.0
         self._build_initial_clouds()
         self._build_initial_platforms()
-    def update(self, dt: float, inputs: InputState) -> object | None:
+
+    def update(self, dt: float, inputs: InputState) -> Scene | None:
         self.animation_time += dt
         self._tick_feedback(dt)
         if self._pause_tapped(inputs):
@@ -222,8 +224,6 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
                 self.pause_page = "settings"
             return None
         if inputs.was_pressed(glfw.KEY_ESCAPE):
-            if self.paused:
-                return self.on_exit()
             return self.on_exit()
         if inputs.was_pressed(glfw.KEY_R):
             self.reset()
@@ -269,6 +269,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         if self.game_over and not was_game_over:
             self._finalize_score()
         return None
+
     def render(self, draw: DrawList) -> None:
         _, sky_low, sky_high, _ = self._current_theme()
         draw.gradient_quad(
