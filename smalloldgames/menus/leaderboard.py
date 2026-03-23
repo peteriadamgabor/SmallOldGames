@@ -26,16 +26,21 @@ class LeaderboardScene:
     def __init__(
         self,
         on_back,
-        game: GameDefinition,
+        games: tuple[GameDefinition, ...],
+        current_game: GameDefinition,
         *,
         score_repository: ScoreRepository | None = None,
     ) -> None:
         self.on_back = on_back
-        self.game = game
+        self.games = games
+        self.game = current_game
         self.score_repository = score_repository
         self.editing_name = False
         self.player_name = self._load_player_name()
         self.draft_name = self.player_name
+        self._refresh_data()
+
+    def _refresh_data(self) -> None:
         self.top_scores = self._load_top_scores()
         self.stats = self._load_stats()
 
@@ -49,8 +54,18 @@ class LeaderboardScene:
                 return self.on_back()
             if inputs.pointer_in_rect(288, 120, 210, 72):
                 return self.game.make_scene()
+            if inputs.pointer_in_rect(42, 860, 60, 60):
+                self._cycle_game(-1)
+                return None
+            if inputs.pointer_in_rect(438, 860, 60, 60):
+                self._cycle_game(1)
+                return None
         if self.editing_name:
             return self._update_name_editor(inputs)
+        if inputs.was_pressed(glfw.KEY_LEFT, glfw.KEY_A):
+            self._cycle_game(-1)
+        if inputs.was_pressed(glfw.KEY_RIGHT, glfw.KEY_D):
+            self._cycle_game(1)
         if inputs.was_pressed(glfw.KEY_ESCAPE, glfw.KEY_BACKSPACE):
             return self.on_back()
         if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE):
@@ -63,8 +78,13 @@ class LeaderboardScene:
     def render(self, draw: DrawList) -> None:
         draw_menu_background(draw)
         self._render_backdrop(draw)
-        draw.text(draw.width * 0.5, 874, f"{self.game.title} BOARD", scale=5, color=TEXT_LIGHT, centered=True)
-        draw.text(draw.width * 0.5, 838, "PERSISTENT SQLITE SCOREBOARD", scale=2, color=TEXT_MUTED, centered=True)
+        
+        # Game cycling arrows
+        draw.text(64, 874, "<", scale=5, color=ACCENT, centered=True)
+        draw.text(476, 874, ">", scale=5, color=ACCENT, centered=True)
+        
+        draw.text(draw.width * 0.5, 874, f"{self.game.title}", scale=5, color=TEXT_LIGHT, centered=True)
+        draw.text(draw.width * 0.5, 838, "LOCAL SQLITE BOARD", scale=2, color=TEXT_MUTED, centered=True)
 
         draw_panel(draw, x=42, y=642, width=456, height=150, style=BASE_PANEL)
         draw.text(66, 760, "PLAYER NAME", scale=3, color=TEXT_LIGHT, world=False)
@@ -90,6 +110,16 @@ class LeaderboardScene:
 
         draw_button(draw, x=42, y=120, width=210, height=72, label="BACK", style=BASE_PANEL)
         draw_button(draw, x=288, y=120, width=210, height=72, label="PLAY", label_color=ACCENT, style=BASE_PANEL)
+
+    def _cycle_game(self, direction: int) -> None:
+        current_index = 0
+        for i, g in enumerate(self.games):
+            if g.id == self.game.id:
+                current_index = i
+                break
+        next_index = (current_index + direction) % len(self.games)
+        self.game = self.games[next_index]
+        self._refresh_data()
 
     @staticmethod
     def music_track() -> str | None:

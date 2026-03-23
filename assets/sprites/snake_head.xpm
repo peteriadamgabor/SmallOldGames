@@ -1,0 +1,25 @@
+/* XPM */
+static char * snake_head_xpm[] = {
+"16 16 5 1",
+"  c None",
+". c #101112",
+"g c #6FD12B",
+"d c #2F7C14",
+"y c #F3A63A",
+"                ",
+"   dddddddddd   ",
+"  dggggggggggd  ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dgggggyygggggd ",
+" dgggggyygggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dgggggyygggggd ",
+" dgggggyygggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+"  dggggggggggd  ",
+"   dddddddddd   ",
+"                "
+};

@@ -1,0 +1,23 @@
+/* XPM */
+static char * snake_body_xpm[] = {
+"16 16 3 1",
+"  c None",
+"g c #6FD12B",
+"d c #2F7C14",
+"                ",
+"   dddddddddd   ",
+"  dggggggggggd  ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+" dggggggggggggd ",
+"  dggggggggggd  ",
+"   dddddddddd   ",
+"                "
+};

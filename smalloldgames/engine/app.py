@@ -5,11 +5,11 @@ import time
 
 import glfw
 
-from smalloldgames.assets import SHADERS_DIR, font_glyphs_from_atlas
+from smalloldgames.assets import SHADERS_DIR, font_glyphs_from_atlas, COMBINED_ATLAS
 from smalloldgames.data.storage import ScoreRepository
 from smalloldgames.games.sketch_hopper import SketchHopperScene
-from smalloldgames.games.sketch_hopper_game.assets import SKETCH_HOPPER_ATLAS
-from smalloldgames.menus import LeaderboardScene, LauncherScene
+from smalloldgames.games.snake import SnakeScene
+from smalloldgames.menus import LeaderboardScene, LauncherScene, SettingsScene
 from smalloldgames.rendering.primitives import DrawList
 from smalloldgames.rendering.vulkan_renderer import VulkanRenderer
 
@@ -66,12 +66,12 @@ class App:
             glfw.set_mouse_button_callback(self.window, self._on_mouse_button)
 
             shader_dir = SHADERS_DIR
-            self.renderer = VulkanRenderer(self.window, shader_dir=shader_dir, sprite_atlas=SKETCH_HOPPER_ATLAS)
+            self.renderer = VulkanRenderer(self.window, shader_dir=shader_dir, sprite_atlas=COMBINED_ATLAS)
             self.draw_list = DrawList(
                 WINDOW_WIDTH,
                 WINDOW_HEIGHT,
-                white_uv=SKETCH_HOPPER_ATLAS.white_uv,
-                font_glyphs=font_glyphs_from_atlas(SKETCH_HOPPER_ATLAS),
+                white_uv=COMBINED_ATLAS.white_uv,
+                font_glyphs=font_glyphs_from_atlas(COMBINED_ATLAS),
             )
             self.games = GameRegistry(
                 (
@@ -84,6 +84,16 @@ class App:
                         art_variant="hopper",
                         music_track="sketch_hopper",
                         make_scene=self._make_sketch_hopper,
+                    ),
+                    GameDefinition(
+                        id="snake",
+                        title="SNAKE CLASSIC",
+                        subtitle="RETRO GRID JUGGERNAUT",
+                        detail="PRESS ENTER OR SPACE",
+                        score_key="snake",
+                        art_variant="snake",
+                        music_track="launcher",
+                        make_scene=self._make_snake,
                     ),
                 )
             )
@@ -174,11 +184,31 @@ class App:
     def _make_sketch_hopper(self) -> SketchHopperScene:
         return SketchHopperScene(self._make_launcher, score_repository=self.score_repository, audio=self.audio)
 
+    def _make_snake(self) -> SnakeScene:
+        return SnakeScene(self._make_launcher, score_repository=self.score_repository, audio=self.audio)
+
     def _make_launcher(self) -> LauncherScene:
-        return LauncherScene(self.games.all(), self._make_leaderboard, score_repository=self.score_repository)
+        return LauncherScene(
+            self.games.all(),
+            self._make_leaderboard,
+            self._make_settings,
+            score_repository=self.score_repository,
+        )
 
     def _make_leaderboard(self, game: GameDefinition | None = None) -> LeaderboardScene:
-        return LeaderboardScene(self._make_launcher, game or self.games.primary(), score_repository=self.score_repository)
+        return LeaderboardScene(
+            self._make_launcher,
+            self.games.all(),
+            game or self.games.primary(),
+            score_repository=self.score_repository,
+        )
+
+    def _make_settings(self) -> SettingsScene:
+        return SettingsScene(
+            self._make_launcher,
+            score_repository=self.score_repository,
+            on_sound_changed=self.audio.set_enabled,
+        )
 
     def _on_key(self, _window: glfw._GLFWwindow, key: int, _scancode: int, action: int, _mods: int) -> None:
         self.inputs.on_key(key, action)

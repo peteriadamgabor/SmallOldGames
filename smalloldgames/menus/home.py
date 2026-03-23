@@ -16,6 +16,10 @@ from .common import (
     MONSTER_SPRITE,
     PLATFORM_MOVING_SPRITE,
     PLATFORM_STABLE_SPRITE,
+    SNAKE_HEAD_SPRITE,
+    SNAKE_BODY_SPRITE,
+    FOOD_SPRITE,
+    BLACK_HOLE_SPRITE,
     TEXT_LIGHT,
     TEXT_MUTED,
     draw_menu_background,
@@ -28,11 +32,13 @@ class LauncherScene:
         self,
         games: tuple[GameDefinition, ...],
         on_open_leaderboard,
+        on_open_settings,
         *,
         score_repository: ScoreRepository | None = None,
     ) -> None:
         self.games = games
         self.on_open_leaderboard = on_open_leaderboard
+        self.on_open_settings = on_open_settings
         self.score_repository = score_repository
         self.selection = 0
         self.player_name = self._load_player_name()
@@ -45,16 +51,20 @@ class LauncherScene:
                     return game.make_scene()
             if inputs.pointer_in_rect(*self._leaderboard_card_rect()):
                 return self.on_open_leaderboard(self._selected_game())
+            if inputs.pointer_in_rect(*self._settings_card_rect()):
+                return self.on_open_settings()
         if inputs.was_pressed(glfw.KEY_UP, glfw.KEY_W):
-            self.selection = (self.selection - 1) % (len(self.games) + 1)
+            self.selection = (self.selection - 1) % (len(self.games) + 2)
         if inputs.was_pressed(glfw.KEY_DOWN, glfw.KEY_S):
-            self.selection = (self.selection + 1) % (len(self.games) + 1)
+            self.selection = (self.selection + 1) % (len(self.games) + 2)
         if inputs.was_pressed(glfw.KEY_TAB, glfw.KEY_L):
             return self.on_open_leaderboard(self._selected_game())
         if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE):
             if self.selection < len(self.games):
                 return self.games[self.selection].make_scene()
-            return self.on_open_leaderboard(self._selected_game())
+            if self.selection == len(self.games):
+                return self.on_open_leaderboard(self._selected_game())
+            return self.on_open_settings()
         if inputs.was_pressed(glfw.KEY_P):
             return self._selected_game().make_scene()
         return None
@@ -103,10 +113,18 @@ class LauncherScene:
             variant="board",
         )
 
-        draw.text(draw.width * 0.5, 170, "ARROWS OR W S SELECT", scale=3, color=TEXT_MUTED, centered=True)
-        draw.text(draw.width * 0.5, 138, "ENTER OPENS   TAP CARD OR TAB / L", scale=2, color=ACCENT, centered=True)
-        draw.text(draw.width * 0.5, 110, "DURING GAME: A D MOVE   SPACE SHOOTS", scale=2, color=TEXT_MUTED, centered=True)
-        draw.text(draw.width * 0.5, 86, "R RESTARTS   ESC RETURNS", scale=2, color=TEXT_MUTED, centered=True)
+        self._draw_card(
+            draw,
+            bottom=self._card_bottom(len(self.games) + 1),
+            title="SETTINGS",
+            subtitle="SOUND & CONTROLS",
+            detail="PERSISTENT PREFERENCES",
+            active=self.selection == len(self.games) + 1,
+            variant="settings",
+        )
+
+        draw.text(draw.width * 0.5, 76, "ARROWS OR W S SELECT", scale=3, color=TEXT_MUTED, centered=True)
+        draw.text(draw.width * 0.5, 46, "ENTER OPENS   TAP CARD OR TAB / L", scale=2, color=ACCENT, centered=True)
 
     @staticmethod
     def music_track() -> str | None:
@@ -150,9 +168,23 @@ class LauncherScene:
             draw.sprite(316, bottom + 16, PLATFORM_STABLE_SPRITE, width=120, height=28, world=False)
             draw.sprite(350, bottom + 42, HOPPER_SPRITE, width=56, height=56, world=False)
             return
-        draw.sprite(334, bottom + 74, CLOUD_SPRITE, width=84, height=38, world=False)
-        draw.sprite(314, bottom + 20, PLATFORM_MOVING_SPRITE, width=112, height=26, world=False)
-        draw.sprite(346, bottom + 44, MONSTER_SPRITE, width=68, height=38, world=False)
+        if variant == "snake":
+            draw.sprite(330, bottom + 72, CLOUD_SPRITE, width=90, height=42, world=False)
+            if SNAKE_HEAD_SPRITE and SNAKE_BODY_SPRITE and FOOD_SPRITE:
+                draw.sprite(360, bottom + 24, SNAKE_HEAD_SPRITE, width=40, height=40, world=False)
+                draw.sprite(320, bottom + 24, SNAKE_BODY_SPRITE, width=40, height=40, world=False)
+                draw.sprite(380, bottom + 60, FOOD_SPRITE, width=32, height=32, world=False)
+            else:
+                draw.sprite(350, bottom + 42, HOPPER_SPRITE, width=56, height=56, world=False)
+            return
+        if variant == "board":
+            draw.sprite(334, bottom + 74, CLOUD_SPRITE, width=84, height=38, world=False)
+            draw.sprite(314, bottom + 20, PLATFORM_MOVING_SPRITE, width=112, height=26, world=False)
+            draw.sprite(346, bottom + 44, MONSTER_SPRITE, width=68, height=38, world=False)
+            return
+        # variant "settings"
+        draw.sprite(330, bottom + 68, CLOUD_SPRITE, width=80, height=36, world=False)
+        draw.sprite(348, bottom + 38, BLACK_HOLE_SPRITE, width=62, height=62, world=False)
 
     def _load_player_name(self) -> str:
         if self.score_repository is None:
@@ -180,3 +212,6 @@ class LauncherScene:
 
     def _leaderboard_card_rect(self) -> tuple[float, float, float, float]:
         return self._game_card_rect(len(self.games))
+
+    def _settings_card_rect(self) -> tuple[float, float, float, float]:
+        return self._game_card_rect(len(self.games) + 1)

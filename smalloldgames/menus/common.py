@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from smalloldgames.games.sketch_hopper_game.assets import SKETCH_HOPPER_ATLAS
+from smalloldgames.assets import COMBINED_ATLAS
 from smalloldgames.rendering.primitives import DrawList
 
 Color = tuple[float, float, float, float]
@@ -18,12 +18,15 @@ TEXT_MUTED: Color = (0.71, 0.76, 0.83, 1.0)
 ACCENT: Color = (1.0, 0.84, 0.29, 1.0)
 GOOD: Color = (0.43, 0.86, 0.54, 1.0)
 
-CLOUD_SPRITE = SKETCH_HOPPER_ATLAS.sprites["cloud"]
-HOPPER_SPRITE = SKETCH_HOPPER_ATLAS.sprites["hopper"]
-MONSTER_SPRITE = SKETCH_HOPPER_ATLAS.sprites["monster"]
-BLACK_HOLE_SPRITE = SKETCH_HOPPER_ATLAS.sprites["black_hole"]
-PLATFORM_STABLE_SPRITE = SKETCH_HOPPER_ATLAS.sprites["platform_stable"]
-PLATFORM_MOVING_SPRITE = SKETCH_HOPPER_ATLAS.sprites["platform_moving"]
+CLOUD_SPRITE = COMBINED_ATLAS.sprites["cloud"]
+HOPPER_SPRITE = COMBINED_ATLAS.sprites["hopper"]
+MONSTER_SPRITE = COMBINED_ATLAS.sprites["monster"]
+BLACK_HOLE_SPRITE = COMBINED_ATLAS.sprites["black_hole"]
+PLATFORM_STABLE_SPRITE = COMBINED_ATLAS.sprites["platform_stable"]
+PLATFORM_MOVING_SPRITE = COMBINED_ATLAS.sprites["platform_moving"]
+SNAKE_HEAD_SPRITE = COMBINED_ATLAS.sprites.get("snake_head")
+SNAKE_BODY_SPRITE = COMBINED_ATLAS.sprites.get("snake_body")
+FOOD_SPRITE = COMBINED_ATLAS.sprites.get("food")
 
 
 def fit_scale(draw: DrawList, text: str, *, preferred: int, minimum: int, max_width: float) -> int:

@@ -1,0 +1,24 @@
+/* XPM */
+static char * food_xpm[] = {
+"16 16 4 1",
+"  c None",
+". c #101112",
+"r c #D12B2B",
+"g c #2F7C14",
+"                ",
+"      gg        ",
+"     g..g       ",
+"    rrrrrrrr    ",
+"   rrrrrrrrrr   ",
+"  rrrrrrrrrrrr  ",
+"  rrrrrrrrrrrr  ",
+"  rrrrrrrrrrrr  ",
+"  rrrrrrrrrrrr  ",
+"  rrrrrrrrrrrr  ",
+"  rrrrrrrrrrrr  ",
+"   rrrrrrrrrr   ",
+"    rrrrrrrr    ",
+"      rrrr      ",
+"                ",
+"                "
+};
