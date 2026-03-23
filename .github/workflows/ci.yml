@@ -67,10 +67,10 @@ jobs:
         include:
           - os: ubuntu-latest
             build_cmd: bash scripts/build_linux.sh
-            executable: dist/SmallOldGames
+            artifact: dist/SmallOldGames-linux-x86_64.tar.gz
           - os: windows-latest
             build_cmd: .\scripts\build_windows.ps1
-            executable: dist/SmallOldGames.exe
+            artifact: dist/SmallOldGames-windows-x64.zip
 
     steps:
       - name: Check out repository
@@ -84,8 +84,8 @@ jobs:
       - name: Build distribution
         run: ${{ matrix.build_cmd }}
 
-      - name: Verify executable exists
-        run: test -f "${{ matrix.executable }}" || (echo "Build output not found" && exit 1)
+      - name: Verify build artifact exists
+        run: test -f "${{ matrix.artifact }}" || (echo "Build artifact not found" && exit 1)
         shell: bash
 
   assets:
