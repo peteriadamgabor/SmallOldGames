@@ -3,8 +3,7 @@ from __future__ import annotations
 import unittest
 
 from smalloldgames.engine import ComponentListProxy, World
-from smalloldgames.games.sketch_hopper import BlackHole, Cloud, ImpactEffect, Monster, Pickup
-from smalloldgames.games.sketch_hopper import SketchHopperScene
+from smalloldgames.games.sketch_hopper import BlackHole, Cloud, ImpactEffect, Monster, Pickup, SketchHopperScene
 
 
 class WorldTests(unittest.TestCase):

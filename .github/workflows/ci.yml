@@ -7,6 +7,29 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      - name: Sync dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy smalloldgames
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -35,3 +58,68 @@ jobs:
 
       - name: Run tests
         run: uv run python -m unittest discover -s tests -v
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build_cmd: bash scripts/build_linux.sh
+            executable: dist/SmallOldGames
+          - os: windows-latest
+            build_cmd: .\scripts\build_windows.ps1
+            executable: dist/SmallOldGames.exe
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build distribution
+        run: ${{ matrix.build_cmd }}
+
+      - name: Verify executable exists
+        run: test -f "${{ matrix.executable }}" || (echo "Build output not found" && exit 1)
+        shell: bash
+
+  assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Validate asset references
+        run: uv run python scripts/validate_assets.py
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install pip-audit
+        run: uv tool install pip-audit
+
+      - name: Audit dependencies
+        run: uv run pip-audit -r <(uv pip compile pyproject.toml --quiet)
+        shell: bash
+        continue-on-error: true

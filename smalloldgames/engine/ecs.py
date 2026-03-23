@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 EntityId = int
 T = TypeVar("T")
@@ -71,7 +71,7 @@ class World:
         )
 
 
-class ComponentListProxy(Generic[T]):
+class ComponentListProxy[T]:
     """List-like adapter exposing one component type from a world."""
 
     def __init__(self, world: World, component_type: type[T]) -> None:

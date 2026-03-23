@@ -1,18 +1,14 @@
 from __future__ import annotations
 
+import random
 from collections.abc import Callable
 from dataclasses import dataclass
-import random
 
 import glfw
 
 from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import InputState
-from smalloldgames.engine import Scene
+from smalloldgames.engine import InputState, Scene
 from smalloldgames.engine.audio import AudioEngine
-from smalloldgames.rendering.primitives import DrawList
-
-from .assets import SPACE_INVADERS_ATLAS
 from smalloldgames.menus.common import (
     ACCENT,
     BG_BOTTOM,
@@ -22,6 +18,9 @@ from smalloldgames.menus.common import (
     TEXT_MUTED,
 )
 from smalloldgames.menus.components import draw_button
+from smalloldgames.rendering.primitives import DrawList
+
+from .assets import SPACE_INVADERS_ATLAS
 
 # ---------------------------------------------------------------------------
 # Sprites
@@ -94,13 +93,50 @@ INITIAL_GRID_X = 60.0
 INITIAL_GRID_Y = 500.0
 
 # Shield block offsets (col, row) — each block is SHIELD_BLOCK px
-SHIELD_SHAPE: frozenset[tuple[int, int]] = frozenset([
-    (2, 4), (3, 4), (4, 4), (5, 4), (6, 4), (7, 4),
-    (1, 3), (2, 3), (3, 3), (4, 3), (5, 3), (6, 3), (7, 3), (8, 3),
-    (0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (6, 2), (7, 2), (8, 2), (9, 2),
-    (0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1), (9, 1),
-    (0, 0), (1, 0), (2, 0),                               (7, 0), (8, 0), (9, 0),
-])
+SHIELD_SHAPE: frozenset[tuple[int, int]] = frozenset(
+    [
+        (2, 4),
+        (3, 4),
+        (4, 4),
+        (5, 4),
+        (6, 4),
+        (7, 4),
+        (1, 3),
+        (2, 3),
+        (3, 3),
+        (4, 3),
+        (5, 3),
+        (6, 3),
+        (7, 3),
+        (8, 3),
+        (0, 2),
+        (1, 2),
+        (2, 2),
+        (3, 2),
+        (4, 2),
+        (5, 2),
+        (6, 2),
+        (7, 2),
+        (8, 2),
+        (9, 2),
+        (0, 1),
+        (1, 1),
+        (2, 1),
+        (3, 1),
+        (4, 1),
+        (5, 1),
+        (6, 1),
+        (7, 1),
+        (8, 1),
+        (9, 1),
+        (0, 0),
+        (1, 0),
+        (2, 0),
+        (7, 0),
+        (8, 0),
+        (9, 0),
+    ]
+)
 
 
 # ---------------------------------------------------------------------------
@@ -217,16 +253,20 @@ class SpaceInvadersScene:
             return None
 
         if self.game_over:
-            if inputs.was_pressed(glfw.KEY_R) or inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE):
-                self.reset()
-            elif self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80):
+            if (
+                inputs.was_pressed(glfw.KEY_R)
+                or inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE)
+                or (
+                    self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80)
+                )
+            ):
                 self.reset()
             return None
 
         if self.paused:
-            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE):
-                self.paused = False
-            elif self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80):
+            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE) or (
+                self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80)
+            ):
                 self.paused = False
             return None
 
@@ -289,9 +329,13 @@ class SpaceInvadersScene:
         self.player_x = max(PLAY_LEFT + PLAYER_W * 0.5, min(PLAY_RIGHT - PLAYER_W * 0.5, self.player_x))
 
         should_fire = inputs.was_pressed(glfw.KEY_SPACE, glfw.KEY_UP, glfw.KEY_W)
-        if self.touch_controls_enabled and not should_fire:
-            if inputs.pointer_pressed and inputs.pointer_in_rect(170, 0, 200, 180):
-                should_fire = True
+        if (
+            self.touch_controls_enabled
+            and not should_fire
+            and inputs.pointer_pressed
+            and inputs.pointer_in_rect(170, 0, 200, 180)
+        ):
+            should_fire = True
 
         if should_fire and len(self.bullets) < MAX_PLAYER_BULLETS:
             self.bullets.append(Bullet(x=self.player_x, y=PLAYER_Y + PLAYER_H))
@@ -311,9 +355,8 @@ class SpaceInvadersScene:
                 if bullet in self.bullets:
                     self.bullets.remove(bullet)
                 continue
-            if self._bullet_vs_shields(bullet):
-                if bullet in self.bullets:
-                    self.bullets.remove(bullet)
+            if self._bullet_vs_shields(bullet) and bullet in self.bullets:
+                self.bullets.remove(bullet)
 
     def _bullet_vs_aliens(self, bullet: Bullet) -> bool:
         for alien in self.aliens:
@@ -321,10 +364,7 @@ class SpaceInvadersScene:
                 continue
             ax = self.grid_x + alien.col * ALIEN_SPACING_X
             ay = self.grid_y + alien.row * ALIEN_SPACING_Y
-            if (
-                abs(bullet.x - ax) < ALIEN_W * 0.5
-                and abs(bullet.y - ay) < ALIEN_H * 0.5
-            ):
+            if abs(bullet.x - ax) < ALIEN_W * 0.5 and abs(bullet.y - ay) < ALIEN_H * 0.5:
                 alien.alive = False
                 self.score += ALIEN_POINTS[alien.alien_type]
                 if self.audio:
@@ -360,9 +400,8 @@ class SpaceInvadersScene:
                 if bomb in self.bombs:
                     self.bombs.remove(bomb)
                 continue
-            if self._bomb_vs_shields(bomb):
-                if bomb in self.bombs:
-                    self.bombs.remove(bomb)
+            if self._bomb_vs_shields(bomb) and bomb in self.bombs:
+                self.bombs.remove(bomb)
 
     def _bomb_vs_player(self, bomb: Bomb) -> bool:
         if self.player_hit_timer > 0.0:
@@ -470,10 +509,7 @@ class SpaceInvadersScene:
                 self.ufo_active = False
                 self.ufo_timer = self.rng.uniform(UFO_INTERVAL_MIN, UFO_INTERVAL_MAX)
             for bullet in self.bullets[:]:
-                if (
-                    abs(bullet.x - self.ufo_x) < UFO_W * 0.5
-                    and abs(bullet.y - UFO_Y) < UFO_H * 0.5
-                ):
+                if abs(bullet.x - self.ufo_x) < UFO_W * 0.5 and abs(bullet.y - UFO_Y) < UFO_H * 0.5:
                     ufo_points = self.rng.choice([50, 100, 150, 300])
                     self.score += ufo_points
                     self.ufo_active = False
@@ -505,9 +541,14 @@ class SpaceInvadersScene:
     # -----------------------------------------------------------------------
     def _render_background(self, draw: DrawList) -> None:
         draw.gradient_quad(
-            0, 0, draw.width, draw.height,
-            bottom_left=BG_BOTTOM, bottom_right=BG_BOTTOM,
-            top_right=BG_TOP, top_left=BG_TOP,
+            0,
+            0,
+            draw.width,
+            draw.height,
+            bottom_left=BG_BOTTOM,
+            bottom_right=BG_BOTTOM,
+            top_right=BG_TOP,
+            top_left=BG_TOP,
             world=False,
         )
 
@@ -538,14 +579,17 @@ class SpaceInvadersScene:
         if not self.ufo_active:
             return
         draw.sprite(
-            self.ufo_x - UFO_W * 0.5, UFO_Y - UFO_H * 0.5,
-            UFO_SPRITE, width=UFO_W, height=UFO_H, world=False,
+            self.ufo_x - UFO_W * 0.5,
+            UFO_Y - UFO_H * 0.5,
+            UFO_SPRITE,
+            width=UFO_W,
+            height=UFO_H,
+            world=False,
         )
 
     def _render_player(self, draw: DrawList) -> None:
-        if self.player_hit_timer > 0.0:
-            if int(self.player_hit_timer * 8) % 2 == 0:
-                return
+        if self.player_hit_timer > 0.0 and int(self.player_hit_timer * 8) % 2 == 0:
+            return
         draw.sprite(
             self.player_x - PLAYER_W * 0.5,
             PLAYER_Y,
@@ -560,7 +604,8 @@ class SpaceInvadersScene:
             draw.quad(
                 bullet.x - BULLET_W * 0.5,
                 bullet.y - BULLET_H * 0.5,
-                BULLET_W, BULLET_H,
+                BULLET_W,
+                BULLET_H,
                 BULLET_COLOR,
                 world=False,
             )
@@ -570,7 +615,8 @@ class SpaceInvadersScene:
             draw.quad(
                 bomb.x - BOMB_W * 0.5,
                 bomb.y - BOMB_H * 0.5,
-                BOMB_W, BOMB_H,
+                BOMB_W,
+                BOMB_H,
                 BOMB_COLOR,
                 world=False,
             )

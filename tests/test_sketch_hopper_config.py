@@ -1,16 +1,16 @@
 from __future__ import annotations
 
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import unittest
 
+from smalloldgames.games.sketch_hopper import SketchHopperScene
 from smalloldgames.games.sketch_hopper_game.config import (
     SketchHopperConfig,
     load_sketch_hopper_config,
     reset_sketch_hopper_config,
     save_sketch_hopper_config,
 )
-from smalloldgames.games.sketch_hopper import SketchHopperScene
 
 
 class SketchHopperConfigTests(unittest.TestCase):

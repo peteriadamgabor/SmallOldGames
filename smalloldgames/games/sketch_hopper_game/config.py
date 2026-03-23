@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import contextlib
+import tomllib
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import get_type_hints
-import tomllib
 
 from smalloldgames.assets import CONFIG_DIR
+
 
 @dataclass(frozen=True, slots=True)
 class SketchHopperConfig:
@@ -334,9 +336,7 @@ SECTIONS: dict[str, tuple[str, ...]] = {
         "black_hole_spawn_chance",
         "black_hole_min_height",
     ),
-    "background": (
-        "cloud_max_parallax",
-    ),
+    "background": ("cloud_max_parallax",),
     "themes": (
         "theme_height_1",
         "theme_height_2",
@@ -389,10 +389,8 @@ def save_sketch_hopper_config(config: SketchHopperConfig, path: str | Path | Non
 
 def reset_sketch_hopper_config(path: str | Path | None = None) -> None:
     config_path = Path(path) if path is not None else DEFAULT_SKETCH_HOPPER_OVERRIDE_PATH
-    try:
+    with contextlib.suppress(FileNotFoundError):
         config_path.unlink()
-    except FileNotFoundError:
-        pass
 
 
 def _merge_file(config: SketchHopperConfig, config_path: Path) -> SketchHopperConfig:

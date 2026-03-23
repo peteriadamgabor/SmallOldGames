@@ -8,9 +8,7 @@ from smalloldgames.rendering.primitives import DrawList
 
 class DrawListTextTests(unittest.TestCase):
     def test_text_uses_one_quad_per_character_when_font_glyphs_are_available(self) -> None:
-        atlas = build_sprite_atlas(
-            {"dummy": Sprite(width=1, height=1, pixels=(((1.0, 1.0, 1.0, 1.0),),))}
-        )
+        atlas = build_sprite_atlas({"dummy": Sprite(width=1, height=1, pixels=(((1.0, 1.0, 1.0, 1.0),),))})
         draw = DrawList(540, 960, white_uv=atlas.white_uv, font_glyphs=font_glyphs_from_atlas(atlas))
 
         draw.text(20.0, 30.0, "AB1", scale=2.0, color=(1.0, 0.5, 0.25, 1.0))

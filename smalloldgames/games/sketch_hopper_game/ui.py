@@ -4,14 +4,13 @@ from dataclasses import replace
 
 import glfw
 
-from smalloldgames.engine import InputState
-from smalloldgames.engine import Scene
+from smalloldgames.engine import InputState, Scene
+
 from .config import (
     load_sketch_hopper_config,
     reset_sketch_hopper_config,
     save_sketch_hopper_config,
 )
-
 from .shared import BALANCE_FIELDS
 
 
@@ -27,10 +26,16 @@ class SketchHopperUIMixin:
         return keyboard_axis
 
     def _shoot_tapped(self, inputs: InputState) -> bool:
-        return self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(*self._shoot_touch_rect())
+        return (
+            self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(*self._shoot_touch_rect())
+        )
 
     def _pause_tapped(self, inputs: InputState) -> bool:
-        return self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(*self._pause_button_rect())
+        return (
+            self.touch_controls_enabled
+            and inputs.pointer_pressed
+            and inputs.pointer_in_rect(*self._pause_button_rect())
+        )
 
     def _update_pause_menu(self, inputs: InputState) -> Scene | None:
         if self.pause_page == "balance":
@@ -151,6 +156,7 @@ class SketchHopperUIMixin:
         self.config = replace(self.config, **{field_name: next_value})
         self._apply_config()
         self.confirm_reset_defaults = False
+
     def _trigger_or_apply_balance_reset(self) -> None:
         if not self.confirm_reset_defaults:
             self.confirm_reset_defaults = True

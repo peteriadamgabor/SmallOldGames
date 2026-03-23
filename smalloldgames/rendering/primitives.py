@@ -63,14 +63,58 @@ class DrawList:
         br_r, br_g, br_b, br_a = bottom_right
         tr_r, tr_g, tr_b, tr_a = top_right
         tl_r, tl_g, tl_b, tl_a = top_left
-        self.vertices.extend((
-            x0, y0, bl_r, bl_g, bl_b, bl_a, u, v,
-            x1, y0, br_r, br_g, br_b, br_a, u, v,
-            x1, y1, tr_r, tr_g, tr_b, tr_a, u, v,
-            x0, y0, bl_r, bl_g, bl_b, bl_a, u, v,
-            x1, y1, tr_r, tr_g, tr_b, tr_a, u, v,
-            x0, y1, tl_r, tl_g, tl_b, tl_a, u, v,
-        ))
+        self.vertices.extend(
+            (
+                x0,
+                y0,
+                bl_r,
+                bl_g,
+                bl_b,
+                bl_a,
+                u,
+                v,
+                x1,
+                y0,
+                br_r,
+                br_g,
+                br_b,
+                br_a,
+                u,
+                v,
+                x1,
+                y1,
+                tr_r,
+                tr_g,
+                tr_b,
+                tr_a,
+                u,
+                v,
+                x0,
+                y0,
+                bl_r,
+                bl_g,
+                bl_b,
+                bl_a,
+                u,
+                v,
+                x1,
+                y1,
+                tr_r,
+                tr_g,
+                tr_b,
+                tr_a,
+                u,
+                v,
+                x0,
+                y1,
+                tl_r,
+                tl_g,
+                tl_b,
+                tl_a,
+                u,
+                v,
+            )
+        )
 
     def quad(
         self,
@@ -91,14 +135,58 @@ class DrawList:
         y1 = (y + height - cam) * inv_h - 1.0
         r, g, b, a = color
         u, v = self.white_uv
-        self.vertices.extend((
-            x0, y0, r, g, b, a, u, v,
-            x1, y0, r, g, b, a, u, v,
-            x1, y1, r, g, b, a, u, v,
-            x0, y0, r, g, b, a, u, v,
-            x1, y1, r, g, b, a, u, v,
-            x0, y1, r, g, b, a, u, v,
-        ))
+        self.vertices.extend(
+            (
+                x0,
+                y0,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+                x1,
+                y0,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+                x1,
+                y1,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+                x0,
+                y0,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+                x1,
+                y1,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+                x0,
+                y1,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+            )
+        )
 
     def triangle(
         self,
@@ -114,11 +202,34 @@ class DrawList:
         cam = self._cam_y if world else 0.0
         r, g, b, a = color
         u, v = self.white_uv
-        self.vertices.extend((
-            p0[0] * inv_w - 1.0, (p0[1] - cam) * inv_h - 1.0, r, g, b, a, u, v,
-            p1[0] * inv_w - 1.0, (p1[1] - cam) * inv_h - 1.0, r, g, b, a, u, v,
-            p2[0] * inv_w - 1.0, (p2[1] - cam) * inv_h - 1.0, r, g, b, a, u, v,
-        ))
+        self.vertices.extend(
+            (
+                p0[0] * inv_w - 1.0,
+                (p0[1] - cam) * inv_h - 1.0,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+                p1[0] * inv_w - 1.0,
+                (p1[1] - cam) * inv_h - 1.0,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+                p2[0] * inv_w - 1.0,
+                (p2[1] - cam) * inv_h - 1.0,
+                r,
+                g,
+                b,
+                a,
+                u,
+                v,
+            )
+        )
 
     def text(
         self,
@@ -156,14 +267,58 @@ class DrawList:
                 y1 = (y + glyph_h - cam) * inv_h - 1.0
                 u0, u1 = sprite.u0, sprite.u1
                 v0, v1 = sprite.v1, sprite.v0
-                vertices.extend((
-                    x0, y0, r, g, b, a, u0, v0,
-                    x1, y0, r, g, b, a, u1, v0,
-                    x1, y1, r, g, b, a, u1, v1,
-                    x0, y0, r, g, b, a, u0, v0,
-                    x1, y1, r, g, b, a, u1, v1,
-                    x0, y1, r, g, b, a, u0, v1,
-                ))
+                vertices.extend(
+                    (
+                        x0,
+                        y0,
+                        r,
+                        g,
+                        b,
+                        a,
+                        u0,
+                        v0,
+                        x1,
+                        y0,
+                        r,
+                        g,
+                        b,
+                        a,
+                        u1,
+                        v0,
+                        x1,
+                        y1,
+                        r,
+                        g,
+                        b,
+                        a,
+                        u1,
+                        v1,
+                        x0,
+                        y0,
+                        r,
+                        g,
+                        b,
+                        a,
+                        u0,
+                        v0,
+                        x1,
+                        y1,
+                        r,
+                        g,
+                        b,
+                        a,
+                        u1,
+                        v1,
+                        x0,
+                        y1,
+                        r,
+                        g,
+                        b,
+                        a,
+                        u0,
+                        v1,
+                    )
+                )
             else:
                 self._draw_bitmap_glyph(cursor_x, y, FONT_5X7[character], scale=scale, color=color, world=world)
             cursor_x += char_step
@@ -188,14 +343,58 @@ class DrawList:
         y1 = (y + height - cam) * inv_h - 1.0
         u0, u1 = (sprite.u1, sprite.u0) if flip_x else (sprite.u0, sprite.u1)
         v0, v1 = sprite.v1, sprite.v0
-        self.vertices.extend((
-            x0, y0, 1.0, 1.0, 1.0, 1.0, u0, v0,
-            x1, y0, 1.0, 1.0, 1.0, 1.0, u1, v0,
-            x1, y1, 1.0, 1.0, 1.0, 1.0, u1, v1,
-            x0, y0, 1.0, 1.0, 1.0, 1.0, u0, v0,
-            x1, y1, 1.0, 1.0, 1.0, 1.0, u1, v1,
-            x0, y1, 1.0, 1.0, 1.0, 1.0, u0, v1,
-        ))
+        self.vertices.extend(
+            (
+                x0,
+                y0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                u0,
+                v0,
+                x1,
+                y0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                u1,
+                v0,
+                x1,
+                y1,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                u1,
+                v1,
+                x0,
+                y0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                u0,
+                v0,
+                x1,
+                y1,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                u1,
+                v1,
+                x0,
+                y1,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                u0,
+                v1,
+            )
+        )
 
     @staticmethod
     def measure_text(value: str, *, scale: float) -> float:

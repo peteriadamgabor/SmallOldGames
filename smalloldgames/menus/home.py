@@ -3,12 +3,9 @@ from __future__ import annotations
 import glfw
 
 from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import GameDefinition
-from smalloldgames.engine import InputState
-from smalloldgames.engine import Scene
+from smalloldgames.engine import GameDefinition, InputState, Scene
 from smalloldgames.rendering.primitives import DrawList
 
-from .components import ACTIVE_CARD, IDLE_CARD, draw_panel, draw_play_badge
 from .common import (
     ACCENT,
     BLACK_HOLE_SPRITE,
@@ -29,6 +26,7 @@ from .common import (
     draw_menu_background,
     fit_scale,
 )
+from .components import ACTIVE_CARD, IDLE_CARD, draw_panel, draw_play_badge
 
 HERO_RECT = (48.0, 428.0, 444.0, 250.0)
 GAME_ROW_X = 48.0

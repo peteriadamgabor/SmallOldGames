@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import random
+from collections.abc import Callable
 
 import glfw
 
 from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import InputState
-from smalloldgames.engine import Scene
+from smalloldgames.engine import InputState, Scene
 from smalloldgames.engine.audio import AudioEngine
-from smalloldgames.rendering.primitives import DrawList
-
-from .assets import SNAKE_ATLAS
 from smalloldgames.menus.common import (
     ACCENT,
     BG_BOTTOM,
@@ -20,7 +16,10 @@ from smalloldgames.menus.common import (
     TEXT_LIGHT,
     TEXT_MUTED,
 )
-from smalloldgames.menus.components import BASE_PANEL, draw_panel, draw_button
+from smalloldgames.menus.components import BASE_PANEL, draw_button, draw_panel
+from smalloldgames.rendering.primitives import DrawList
+
+from .assets import SNAKE_ATLAS
 
 
 class SnakeScene:
@@ -70,12 +69,16 @@ class SnakeScene:
             return None
 
         if self.game_over:
-            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE) or (inputs.pointer_pressed and inputs.pointer_in_rect(100, 300, 340, 100)):
+            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE) or (
+                inputs.pointer_pressed and inputs.pointer_in_rect(100, 300, 340, 100)
+            ):
                 self.reset()
             return None
 
         if self.paused:
-            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE) or (inputs.pointer_pressed and inputs.pointer_in_rect(100, 300, 340, 100)):
+            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE) or (
+                inputs.pointer_pressed and inputs.pointer_in_rect(100, 300, 340, 100)
+            ):
                 self.paused = False
             return None
 
@@ -91,10 +94,15 @@ class SnakeScene:
     def render(self, draw: DrawList) -> None:
         # Background
         draw.gradient_quad(
-            0, 0, draw.width, draw.height,
-            bottom_left=BG_BOTTOM, bottom_right=BG_BOTTOM,
-            top_right=BG_TOP, top_left=BG_TOP,
-            world=False
+            0,
+            0,
+            draw.width,
+            draw.height,
+            bottom_left=BG_BOTTOM,
+            bottom_right=BG_BOTTOM,
+            top_right=BG_TOP,
+            top_left=BG_TOP,
+            world=False,
         )
 
         # Grid area
@@ -104,7 +112,7 @@ class SnakeScene:
             y=self.grid_offset_y - 4,
             width=self.grid_size * self.cell_size + 8,
             height=self.grid_size * self.cell_size + 8,
-            style=BASE_PANEL
+            style=BASE_PANEL,
         )
 
         # Food
@@ -115,7 +123,9 @@ class SnakeScene:
         for i, pos in enumerate(self.snake):
             sx, sy = self._grid_to_screen(pos)
             sprite_name = "snake_head" if i == 0 else "snake_body"
-            draw.sprite(sx, sy, SNAKE_ATLAS.sprites[sprite_name], width=self.cell_size, height=self.cell_size, world=False)
+            draw.sprite(
+                sx, sy, SNAKE_ATLAS.sprites[sprite_name], width=self.cell_size, height=self.cell_size, world=False
+            )
 
         # HUD
         draw.text(draw.width * 0.5, 880, "SNAKE CLASSIC", scale=5, color=TEXT_LIGHT, centered=True)
@@ -152,7 +162,7 @@ class SnakeScene:
             self.food = self._spawn_food()
             self.move_speed = max(0.08, 0.15 - (self.score / 500.0) * 0.07)
             if self.audio:
-                self.audio.play("jump") # Reusing jump as a 'pick up' sound
+                self.audio.play("jump")  # Reusing jump as a 'pick up' sound
         else:
             self.snake.pop()
 
@@ -167,14 +177,14 @@ class SnakeScene:
             self.next_direction = (1, 0)
 
         if self.touch_controls_enabled and inputs.pointer_pressed:
-            if inputs.pointer_in_rect(210, 140, 120, 80) and self.direction != (0, -1): # Up
-                 self.next_direction = (0, 1)
-            elif inputs.pointer_in_rect(210, 0, 120, 80) and self.direction != (0, 1): # Down
-                 self.next_direction = (0, -1)
-            elif inputs.pointer_in_rect(100, 70, 110, 80) and self.direction != (1, 0): # Left
-                 self.next_direction = (-1, 0)
-            elif inputs.pointer_in_rect(330, 70, 110, 80) and self.direction != (-1, 0): # Right
-                 self.next_direction = (1, 0)
+            if inputs.pointer_in_rect(210, 140, 120, 80) and self.direction != (0, -1):  # Up
+                self.next_direction = (0, 1)
+            elif inputs.pointer_in_rect(210, 0, 120, 80) and self.direction != (0, 1):  # Down
+                self.next_direction = (0, -1)
+            elif inputs.pointer_in_rect(100, 70, 110, 80) and self.direction != (1, 0):  # Left
+                self.next_direction = (-1, 0)
+            elif inputs.pointer_in_rect(330, 70, 110, 80) and self.direction != (-1, 0):  # Right
+                self.next_direction = (1, 0)
 
     def _spawn_food(self) -> tuple[int, int]:
         while True:
@@ -183,10 +193,7 @@ class SnakeScene:
                 return pos
 
     def _grid_to_screen(self, pos: tuple[int, int]) -> tuple[float, float]:
-        return (
-            self.grid_offset_x + pos[0] * self.cell_size,
-            self.grid_offset_y + pos[1] * self.cell_size
-        )
+        return (self.grid_offset_x + pos[0] * self.cell_size, self.grid_offset_y + pos[1] * self.cell_size)
 
     def _trigger_game_over(self) -> None:
         self.game_over = True
@@ -235,7 +242,7 @@ class SnakeScene:
 
     @staticmethod
     def music_track() -> str | None:
-        return "launcher" # Could add a snake specific track later
+        return "launcher"  # Could add a snake specific track later
 
     def window_title(self) -> str:
         return f"Small Old Games - Snake - Score {self.score}"

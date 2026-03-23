@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from .shared import BlackHole, Cloud, Color, ImpactEffect, Monster, Pickup, Platform, Projectile, THEMES
+from .shared import THEMES, BlackHole, Cloud, Color, ImpactEffect, Monster, Pickup, Platform, Projectile
 
 
 class SketchHopperSystemsMixin:
@@ -44,7 +44,9 @@ class SketchHopperSystemsMixin:
         route_x = self.route_x
         while y <= self.initial_platform_end_y:
             if y > self.initial_platform_start_y:
-                route_x = self._clamp_platform_x(route_x + self.random.uniform(-self.initial_route_shift, self.initial_route_shift))
+                route_x = self._clamp_platform_x(
+                    route_x + self.random.uniform(-self.initial_route_shift, self.initial_route_shift)
+                )
             self.platforms.append(
                 Platform(
                     x=route_x,
@@ -62,10 +64,12 @@ class SketchHopperSystemsMixin:
             y += self.random.uniform(self.initial_platform_gap_min, self.initial_platform_gap_max)
         self.platforms[0].x = self.world_width * 0.5 - self.platform_width * 0.5
         self.route_x = self.platforms[-1].x
+
     def _build_initial_clouds(self) -> None:
         target_height = self.world_height + 340.0
         while self.highest_cloud_y < target_height:
             self._append_cloud_band()
+
     def _tick_platforms(self, dt: float) -> None:
         for platform in self.platforms:
             platform.spring_timer = max(0.0, platform.spring_timer - dt)
@@ -82,6 +86,7 @@ class SketchHopperSystemsMixin:
             if platform.x + platform.width >= self.world_width:
                 platform.x = self.world_width - platform.width
                 platform.velocity_x *= -1.0
+
     def _tick_monsters(self, dt: float) -> None:
         for _, monster in self.dynamic_world.components(Monster).items():
             monster.x += monster.velocity_x * dt
@@ -104,6 +109,7 @@ class SketchHopperSystemsMixin:
                 ):
                     self._spawn_enemy_projectile(monster)
                     monster.shot_timer = self.random.uniform(self.ufo_shot_interval_min, self.ufo_shot_interval_max)
+
     def _tick_projectiles(self, dt: float) -> None:
         surviving_monsters = list(self.monsters)
         dead_projectiles: list[int] = []
@@ -150,7 +156,9 @@ class SketchHopperSystemsMixin:
                 dead_projectiles.append(entity_id)
                 self.score += defeated.score_value
                 self._play_sound("ufo_hit" if defeated.kind == "ufo" else "hit")
-                self._trigger_feedback("UFO DOWN" if defeated.kind == "ufo" else "HIT", (0.98, 0.83, 0.28, 0.90), shake=4.5)
+                self._trigger_feedback(
+                    "UFO DOWN" if defeated.kind == "ufo" else "HIT", (0.98, 0.83, 0.28, 0.90), shake=4.5
+                )
                 self._spawn_impact(
                     defeated.x + defeated.width * 0.5,
                     defeated.y + defeated.height * 0.5,
@@ -172,6 +180,7 @@ class SketchHopperSystemsMixin:
     def _tick_black_holes(self, dt: float) -> None:
         for _, hole in self.dynamic_world.components(BlackHole).items():
             hole.pulse_phase += hole.pulse_speed * dt
+
     def _tick_player(self, dt: float, move_axis: float) -> None:
         boost_velocity = 0.0
         if self.rocket_timer > 0.0:
@@ -217,14 +226,18 @@ class SketchHopperSystemsMixin:
                 platform.broken = True
                 platform.state_timer = 0.12
                 self._trigger_feedback("BROKEN", (0.79, 0.44, 0.18, 0.92), shake=4.0)
-                self._spawn_impact(platform.x + platform.width * 0.5, platform.y + platform.height * 0.5, (0.79, 0.44, 0.18, 0.92))
+                self._spawn_impact(
+                    platform.x + platform.width * 0.5, platform.y + platform.height * 0.5, (0.79, 0.44, 0.18, 0.92)
+                )
                 return
             if platform.kind == "fake":
                 platform.broken = True
                 platform.state_timer = 0.12
                 self._play_sound("break")
                 self._trigger_feedback("FAKE!", (0.95, 0.54, 0.20, 0.92), shake=5.5)
-                self._spawn_impact(platform.x + platform.width * 0.5, platform.y + platform.height * 0.5, (0.95, 0.54, 0.20, 0.92))
+                self._spawn_impact(
+                    platform.x + platform.width * 0.5, platform.y + platform.height * 0.5, (0.95, 0.54, 0.20, 0.92)
+                )
                 return
             self.player.y = top
             if platform.kind == "spring":
@@ -254,8 +267,10 @@ class SketchHopperSystemsMixin:
                     self._trigger_feedback("VANISH", (0.80, 0.86, 1.0, 0.88), shake=3.0)
                 self.player_squash_timer = 0.14
             return
+
     def _tick_camera(self) -> None:
         self.camera_y = max(self.camera_y, self.player.y - self.world_height * self.camera_follow_offset)
+
     def _spawn_platforms(self) -> None:
         target_height = self.camera_y + self.world_height + self.platform_spawn_ahead
         stage_bonus = self._theme_stage_progress() * self.theme_platform_gap_bonus
@@ -265,7 +280,9 @@ class SketchHopperSystemsMixin:
                 self.platform_spawn_gap_max + stage_bonus,
             )
             difficulty = self._difficulty_at_height(self.highest_platform_y)
-            main_x = self._clamp_platform_x(self.route_x + self.random.uniform(-self.path_max_shift, self.path_max_shift))
+            main_x = self._clamp_platform_x(
+                self.route_x + self.random.uniform(-self.path_max_shift, self.path_max_shift)
+            )
             main_kind = self._choose_anchor_kind(self.highest_platform_y, difficulty)
             main_velocity = 0.0
             if main_kind == "moving":
@@ -286,11 +303,15 @@ class SketchHopperSystemsMixin:
             )
             self._maybe_add_pickup(self.platforms[-1], difficulty)
             self.route_x = main_x
-            self._spawn_extra_platforms(base_y=self.highest_platform_y, main_x=main_x, difficulty=difficulty, allow_broken=True)
+            self._spawn_extra_platforms(
+                base_y=self.highest_platform_y, main_x=main_x, difficulty=difficulty, allow_broken=True
+            )
+
     def _spawn_clouds(self) -> None:
         target_height = self.camera_y * self.cloud_max_parallax + self.world_height + 240.0
         while self.highest_cloud_y < target_height:
             self._append_cloud_band()
+
     def _spawn_monsters(self) -> None:
         target_height = self.camera_y + self.world_height + 220.0
         stage_bonus = self._theme_stage_progress() * self.theme_monster_spawn_bonus
@@ -315,7 +336,11 @@ class SketchHopperSystemsMixin:
         attempts = 0
         while len(visible_monsters) < self.min_visible_monsters and attempts < self.monster_top_up_attempts:
             attempts += 1
-            y = self.camera_y + self.world_height * self.monster_top_up_start_ratio + attempts * self.monster_top_up_step_y
+            y = (
+                self.camera_y
+                + self.world_height * self.monster_top_up_start_ratio
+                + attempts * self.monster_top_up_step_y
+            )
             self.highest_monster_y = max(self.highest_monster_y, y)
             self._append_monster(y, kind="monster")
             visible_monsters = [
@@ -325,11 +350,14 @@ class SketchHopperSystemsMixin:
                 <= monster.y
                 <= self.camera_y + self.world_height + self.monster_visible_max_offset
             ]
+
     def _spawn_black_holes(self) -> None:
         target_height = self.camera_y + self.world_height + 260.0
         stage_bonus = self._theme_stage_progress() * self.theme_black_hole_spawn_bonus
         while self.highest_black_hole_y < target_height:
-            self.highest_black_hole_y += self.random.uniform(self.black_hole_spawn_gap_min, self.black_hole_spawn_gap_max)
+            self.highest_black_hole_y += self.random.uniform(
+                self.black_hole_spawn_gap_min, self.black_hole_spawn_gap_max
+            )
             if self.highest_black_hole_y < self.black_hole_min_height:
                 continue
             if self.random.random() > min(0.94, self.black_hole_spawn_chance + stage_bonus):
@@ -346,6 +374,7 @@ class SketchHopperSystemsMixin:
                     pulse_speed=self.random.uniform(1.6, 2.5),
                 )
             )
+
     def _spawn_ufos(self) -> None:
         target_height = self.camera_y + self.world_height + 320.0
         while self.highest_ufo_y < target_height:
@@ -355,30 +384,58 @@ class SketchHopperSystemsMixin:
             if self.random.random() > self.ufo_spawn_chance:
                 continue
             self._append_monster(self.highest_ufo_y, kind="ufo")
+
     def _choose_anchor_kind(self, height: float, difficulty: float) -> str:
         roll = self.random.random()
-        if height >= self.spring_min_height and roll < self.anchor_spring_chance_base + self.anchor_spring_chance_difficulty * difficulty:
+        if (
+            height >= self.spring_min_height
+            and roll < self.anchor_spring_chance_base + self.anchor_spring_chance_difficulty * difficulty
+        ):
             return "spring"
-        if height >= self.moving_platform_min_height and roll < self.anchor_moving_chance_base + self.anchor_moving_chance_difficulty * difficulty:
+        if (
+            height >= self.moving_platform_min_height
+            and roll < self.anchor_moving_chance_base + self.anchor_moving_chance_difficulty * difficulty
+        ):
             return "moving"
         return "stable"
+
     def _choose_extra_kind(self, height: float, difficulty: float) -> str:
         roll = self.random.random()
-        if height >= self.broken_platform_min_height and roll < self.extra_broken_chance_base + self.extra_broken_chance_difficulty * difficulty:
+        if (
+            height >= self.broken_platform_min_height
+            and roll < self.extra_broken_chance_base + self.extra_broken_chance_difficulty * difficulty
+        ):
             return "broken"
-        if height >= self.fake_platform_min_height and roll < self.extra_fake_chance_base + self.extra_fake_chance_difficulty * difficulty:
+        if (
+            height >= self.fake_platform_min_height
+            and roll < self.extra_fake_chance_base + self.extra_fake_chance_difficulty * difficulty
+        ):
             return "fake"
-        if height >= self.vanish_platform_min_height and roll < self.extra_vanish_chance_base + self.extra_vanish_chance_difficulty * difficulty:
+        if (
+            height >= self.vanish_platform_min_height
+            and roll < self.extra_vanish_chance_base + self.extra_vanish_chance_difficulty * difficulty
+        ):
             return "vanish"
-        if height >= self.trampoline_min_height and roll < self.extra_trampoline_chance_base + self.extra_trampoline_chance_difficulty * difficulty:
+        if (
+            height >= self.trampoline_min_height
+            and roll < self.extra_trampoline_chance_base + self.extra_trampoline_chance_difficulty * difficulty
+        ):
             return "trampoline"
-        if height >= self.moving_platform_min_height and roll < self.extra_moving_chance_base + self.extra_moving_chance_difficulty * difficulty:
+        if (
+            height >= self.moving_platform_min_height
+            and roll < self.extra_moving_chance_base + self.extra_moving_chance_difficulty * difficulty
+        ):
             return "moving"
-        if height >= self.spring_min_height and roll < self.extra_spring_chance_base + self.extra_spring_chance_difficulty * difficulty:
+        if (
+            height >= self.spring_min_height
+            and roll < self.extra_spring_chance_base + self.extra_spring_chance_difficulty * difficulty
+        ):
             return "spring"
         return "stable"
+
     def _clamp_platform_x(self, value: float) -> float:
         return max(0.0, min(self.world_width - self.platform_width, value))
+
     def _find_monster_x(self, y: float, width: float) -> float:
         for _ in range(8):
             x = self.random.uniform(0.0, self.world_width - width)
@@ -390,11 +447,13 @@ class SketchHopperSystemsMixin:
             if not near_platform:
                 return x
         return self.random.uniform(0.0, self.world_width - width)
+
     def _spawn_extra_platforms(self, *, base_y: float, main_x: float, difficulty: float, allow_broken: bool) -> None:
         if self.random.random() < self.extra_platform_chance:
             self._try_add_extra_platform(base_y=base_y, main_x=main_x, difficulty=difficulty, allow_broken=allow_broken)
         if self.random.random() < self.second_extra_platform_chance:
             self._try_add_extra_platform(base_y=base_y, main_x=main_x, difficulty=difficulty, allow_broken=allow_broken)
+
     def _append_cloud_band(self) -> None:
         self.highest_cloud_y += self.random.uniform(92.0, 154.0)
         base_y = self.highest_cloud_y
@@ -426,10 +485,13 @@ class SketchHopperSystemsMixin:
             )
         for cloud in band_clouds:
             self._spawn_cloud_entity(cloud)
+
     def _append_monster(self, y: float, *, kind: str) -> None:
         bobbing = kind == "monster" and self.random.random() < self.monster_bob_chance
         base_y = y + self.random.uniform(-self.monster_bob_y_jitter, self.monster_bob_y_jitter)
-        bob_amplitude = self.random.uniform(self.monster_bob_amplitude_min, self.monster_bob_amplitude_max) if bobbing else 0.0
+        bob_amplitude = (
+            self.random.uniform(self.monster_bob_amplitude_min, self.monster_bob_amplitude_max) if bobbing else 0.0
+        )
         bob_phase = self.random.uniform(0.0, math.tau) if bobbing else 0.0
         bob_speed = self.random.uniform(self.monster_bob_speed_min, self.monster_bob_speed_max) if bobbing else 0.0
         width = self.ufo_width if kind == "ufo" else self.monster_width
@@ -450,27 +512,30 @@ class SketchHopperSystemsMixin:
                 bob_amplitude=bob_amplitude,
                 kind=kind,
                 score_value=120 if kind == "ufo" else 85,
-                shot_timer=self.random.uniform(self.ufo_shot_interval_min, self.ufo_shot_interval_max) if kind == "ufo" else 0.0,
+                shot_timer=self.random.uniform(self.ufo_shot_interval_min, self.ufo_shot_interval_max)
+                if kind == "ufo"
+                else 0.0,
             )
         )
+
     def _maybe_add_pickup(self, platform: Platform, difficulty: float) -> None:
         if platform.kind not in {"stable", "moving"}:
             return
         pickup_kind = self._choose_pickup_kind(platform.y, difficulty)
         if pickup_kind is None:
             return
-        pickup_width, pickup_height = self._pickup_dimensions(pickup_kind)
+        pickup_width, _pickup_height = self._pickup_dimensions(pickup_kind)
         pickup_x = platform.x + platform.width * 0.5 - pickup_width * 0.5
         pickup_y = platform.y + platform.height + self.pickup_spawn_offset_y
         if not self._pickup_has_gap(pickup_x, pickup_y):
             return
         if any(
-            abs(existing.x - pickup_x) < self.pickup_overlap_x
-            and abs(existing.y - pickup_y) < self.pickup_overlap_y
+            abs(existing.x - pickup_x) < self.pickup_overlap_x and abs(existing.y - pickup_y) < self.pickup_overlap_y
             for existing in self._pickup_components()
         ):
             return
         self._append_pickup(pickup_kind, pickup_x, pickup_y)
+
     def _spawn_pickups(self) -> None:
         if self.camera_y < self.pickup_top_up_min_camera_y:
             return
@@ -489,7 +554,8 @@ class SketchHopperSystemsMixin:
             platform
             for platform in self.platforms
             if platform.kind in {"stable", "moving"}
-            and platform.y >= max(
+            and platform.y
+            >= max(
                 self.pickup_min_height,
                 self.camera_y + self.pickup_top_up_min_camera_buffer,
                 self.player.y + self.pickup_top_up_min_player_buffer,
@@ -503,7 +569,8 @@ class SketchHopperSystemsMixin:
             )
             and not any(
                 abs(existing.x - (platform.x + platform.width * 0.5 - self.jetpack_width * 0.5)) < self.pickup_overlap_x
-                and abs(existing.y - (platform.y + platform.height + self.pickup_spawn_offset_y)) < self.pickup_overlap_y
+                and abs(existing.y - (platform.y + platform.height + self.pickup_spawn_offset_y))
+                < self.pickup_overlap_y
                 for existing in self._pickup_components()
             )
         ]
@@ -519,6 +586,7 @@ class SketchHopperSystemsMixin:
                 continue
             self._append_pickup(pickup_kind, pickup_x, pickup_y)
             break
+
     def _append_pickup(self, kind: str, x: float, y: float) -> None:
         width, height = self._pickup_dimensions(kind)
         self._spawn_pickup_entity(
@@ -532,6 +600,7 @@ class SketchHopperSystemsMixin:
             )
         )
         self.highest_pickup_y = max(self.highest_pickup_y, y)
+
     def _choose_pickup_kind(self, height: float, difficulty: float) -> str | None:
         if (
             height >= self.shield_min_height
@@ -545,7 +614,8 @@ class SketchHopperSystemsMixin:
             return "rocket"
         if (
             height >= self.propeller_min_height
-            and self.random.random() < self.propeller_spawn_chance_base + self.propeller_spawn_chance_difficulty * difficulty
+            and self.random.random()
+            < self.propeller_spawn_chance_base + self.propeller_spawn_chance_difficulty * difficulty
         ):
             return "propeller"
         if (
@@ -558,6 +628,7 @@ class SketchHopperSystemsMixin:
         if self.random.random() > self.pickup_spawn_chance_base + self.pickup_spawn_chance_difficulty * difficulty:
             return None
         return "jetpack"
+
     def _pickup_dimensions(self, kind: str) -> tuple[float, float]:
         if kind == "boots":
             return (self.boots_width, self.boots_height)
@@ -568,12 +639,13 @@ class SketchHopperSystemsMixin:
         if kind == "propeller":
             return (self.propeller_width, self.propeller_height)
         return (self.jetpack_width, self.jetpack_height)
+
     def _pickup_has_gap(self, pickup_x: float, pickup_y: float) -> bool:
         return not any(
-            abs(existing.x - pickup_x) < self.pickup_overlap_x
-            and abs(existing.y - pickup_y) < self.pickup_min_gap_y
+            abs(existing.x - pickup_x) < self.pickup_overlap_x and abs(existing.y - pickup_y) < self.pickup_min_gap_y
             for existing in self._pickup_components()
         )
+
     def _choose_top_up_pickup_kind(self, height: float) -> str | None:
         if height < self.pickup_min_height:
             return None
@@ -586,6 +658,7 @@ class SketchHopperSystemsMixin:
         if height >= self.boots_min_height and self.random.random() < 0.28:
             return "boots"
         return "jetpack"
+
     def _try_add_extra_platform(self, *, base_y: float, main_x: float, difficulty: float, allow_broken: bool) -> None:
         for _ in range(8):
             candidate_x = self._clamp_platform_x(self.random.uniform(0.0, self.world_width - self.platform_width))
@@ -618,13 +691,21 @@ class SketchHopperSystemsMixin:
             )
             self._maybe_add_pickup(self.platforms[-1], difficulty)
             return
+
     def _can_place_platform(self, x: float, y: float) -> bool:
         for platform in self.platforms:
-            overlaps_x = x < platform.x + platform.width + self.overlap_x_padding and x + self.platform_width + self.overlap_x_padding > platform.x
-            overlaps_y = y < platform.y + platform.height + self.overlap_y_padding and y + self.platform_height + self.overlap_y_padding > platform.y
+            overlaps_x = (
+                x < platform.x + platform.width + self.overlap_x_padding
+                and x + self.platform_width + self.overlap_x_padding > platform.x
+            )
+            overlaps_y = (
+                y < platform.y + platform.height + self.overlap_y_padding
+                and y + self.platform_height + self.overlap_y_padding > platform.y
+            )
             if overlaps_x and overlaps_y:
                 return False
         return True
+
     def _trim_platforms(self) -> None:
         floor = self.camera_y - 200.0
         self.platforms = [
@@ -632,6 +713,7 @@ class SketchHopperSystemsMixin:
             for platform in self.platforms
             if platform.y + platform.height >= floor and (not platform.broken or platform.state_timer > 0.0)
         ]
+
     def _trim_clouds(self) -> None:
         dead_entities: list[int] = []
         for entity_id, cloud in self.dynamic_world.components(Cloud).items():
@@ -639,6 +721,7 @@ class SketchHopperSystemsMixin:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
+
     def _trim_pickups(self) -> None:
         floor = self.camera_y - 120.0
         ceiling = self.camera_y + self.world_height + 120.0
@@ -648,6 +731,7 @@ class SketchHopperSystemsMixin:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
+
     def _trim_black_holes(self) -> None:
         floor = self.camera_y - 220.0
         ceiling = self.camera_y + self.world_height + 220.0
@@ -657,6 +741,7 @@ class SketchHopperSystemsMixin:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
+
     def _trim_monsters(self) -> None:
         floor = self.camera_y - 220.0
         ceiling = self.camera_y + self.world_height + 260.0
@@ -666,6 +751,7 @@ class SketchHopperSystemsMixin:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
+
     def _trim_projectiles(self) -> None:
         floor = self.camera_y - 40.0
         ceiling = self.camera_y + self.world_height + 80.0
@@ -691,6 +777,7 @@ class SketchHopperSystemsMixin:
         )
         self.shot_cooldown = self.projectile_cooldown
         self._play_sound("shoot")
+
     def _spawn_enemy_projectile(self, monster: Monster) -> None:
         self._spawn_projectile_entity(
             Projectile(
@@ -703,32 +790,39 @@ class SketchHopperSystemsMixin:
             )
         )
         self._play_sound("enemy_shot")
+
     def _load_best_score(self) -> int:
         if self.score_repository is None:
             return 0
         return self.score_repository.best_score("sketch_hopper")
+
     def _load_player_name(self) -> str:
         if self.score_repository is None:
             return "PLAYER"
         return self.score_repository.get_player_name()
+
     def _load_sound_enabled(self) -> bool:
         if self.score_repository is None:
             return True
         return self.score_repository.get_sound_enabled()
+
     def _load_touch_controls_enabled(self) -> bool:
         if self.score_repository is None:
             return True
         return self.score_repository.get_touch_controls_enabled()
+
     def _set_sound_enabled(self, enabled: bool) -> None:
         self.sound_enabled = enabled
         if self.audio is not None:
             self.audio.set_enabled(enabled)
         if self.score_repository is not None:
             self.score_repository.set_sound_enabled(enabled)
+
     def _set_touch_controls_enabled(self, enabled: bool) -> None:
         self.touch_controls_enabled = enabled
         if self.score_repository is not None:
             self.score_repository.set_touch_controls_enabled(enabled)
+
     def _finalize_score(self) -> None:
         if self.score_saved:
             return
@@ -739,6 +833,7 @@ class SketchHopperSystemsMixin:
             return
         self.latest_rank = self.score_repository.record_score("sketch_hopper", self.score, player_name=self.player_name)
         self.best_score = self.score_repository.best_score("sketch_hopper")
+
     def _handle_pickups(self) -> None:
         consumed_entities: list[int] = []
         for entity_id, pickup in self.dynamic_world.components(Pickup).items():
@@ -784,10 +879,13 @@ class SketchHopperSystemsMixin:
                     self._play_sound("propeller")
                     self._trigger_feedback("PROPELLER", (0.98, 0.84, 0.28, 0.92), shake=4.0)
                     self.player_stretch_timer = 0.18
-                self._spawn_impact(pickup.x + pickup.width * 0.5, pickup.y + pickup.height * 0.5, (0.92, 0.94, 0.98, 0.88))
+                self._spawn_impact(
+                    pickup.x + pickup.width * 0.5, pickup.y + pickup.height * 0.5, (0.92, 0.94, 0.98, 0.88)
+                )
                 consumed_entities.append(entity_id)
         for entity_id in consumed_entities:
             self.dynamic_world.remove_entity(entity_id)
+
     def _apply_black_holes(self, dt: float) -> None:
         player_cx = self.player.x + self.player.width * 0.5
         player_cy = self.player.y + self.player.height * 0.5
@@ -805,7 +903,9 @@ class SketchHopperSystemsMixin:
                     else:
                         away_x = 0.0
                         away_y = 1.0
-                    escape_distance = max(self.player.width, self.player.height) * 0.5 + max(hole.width, hole.height) * 0.5 + 12.0
+                    escape_distance = (
+                        max(self.player.width, self.player.height) * 0.5 + max(hole.width, hole.height) * 0.5 + 12.0
+                    )
                     player_cx = hole_cx + away_x * escape_distance
                     player_cy = hole_cy + away_y * escape_distance
                     self.player.x = (player_cx - self.player.width * 0.5) % self.world_width
@@ -820,9 +920,11 @@ class SketchHopperSystemsMixin:
             self.player.y += (dy / distance) * pull * dt * 0.75
             player_cx = self.player.x + self.player.width * 0.5
             player_cy = self.player.y + self.player.height * 0.5
+
     def _play_sound(self, effect_name: str) -> None:
         if self.audio is not None:
             self.audio.play(effect_name)
+
     def _handle_monster_collisions(self) -> None:
         for entity_id, monster in self.dynamic_world.components(Monster).items():
             if self._intersects(
@@ -842,8 +944,10 @@ class SketchHopperSystemsMixin:
                     return
                 self.game_over = True
                 return
+
     def _difficulty_at_height(self, height: float) -> float:
         return min(max(height / self.difficulty_ramp_height, 0.0), 1.0)
+
     def _tick_feedback(self, dt: float) -> None:
         self.feedback_timer = max(0.0, self.feedback_timer - dt)
         if self.feedback_timer == 0.0:
@@ -861,12 +965,14 @@ class SketchHopperSystemsMixin:
                 dead_entities.append(entity_id)
         for entity_id in dead_entities:
             self.dynamic_world.remove_entity(entity_id)
+
     def _trigger_feedback(self, text: str, color: Color, *, shake: float = 0.0) -> None:
         self.feedback_text = text
         self.feedback_timer = self.feedback_message_duration
         self.flash_timer = self.effect_flash_duration
         self.flash_color = color
         self.shake_amount = max(self.shake_amount, shake)
+
     def _spawn_impact(self, x: float, y: float, color: Color, *, text: str = "") -> None:
         self._spawn_impact_entity(
             ImpactEffect(
@@ -878,17 +984,22 @@ class SketchHopperSystemsMixin:
                 text=text,
             )
         )
+
     def _camera_shake_offset(self) -> float:
         if self.shake_amount <= 0.0:
             return 0.0
         return math.sin(self.feedback_timer * 36.0 + self.score * 0.01) * self.shake_amount
+
     def _consume_shield(self, text: str) -> bool:
         if self.shield_timer <= 0.0:
             return False
         self.shield_timer = 0.0
         self._trigger_feedback(text, (0.48, 0.82, 1.0, 0.92), shake=4.0)
-        self._spawn_impact(self.player.x + self.player.width * 0.5, self.player.y + self.player.height * 0.5, (0.48, 0.82, 1.0, 0.92))
+        self._spawn_impact(
+            self.player.x + self.player.width * 0.5, self.player.y + self.player.height * 0.5, (0.48, 0.82, 1.0, 0.92)
+        )
         return True
+
     def _theme_index_for_height(self, height: float) -> int:
         if height >= self.theme_height_3:
             return 3
@@ -897,8 +1008,10 @@ class SketchHopperSystemsMixin:
         if height >= self.theme_height_1:
             return 1
         return 0
+
     def _theme_stage_progress(self) -> float:
         return float(self.theme_index)
+
     def _update_theme_progression(self) -> None:
         next_theme = self._theme_index_for_height(self.camera_y)
         if next_theme != self.theme_index:
@@ -906,6 +1019,7 @@ class SketchHopperSystemsMixin:
             self.theme_index = next_theme
             self.theme_transition_timer = 0.65
             self._trigger_feedback(THEMES[self.theme_index][0], THEMES[self.theme_index][3], shake=3.0)
+
     def _current_theme(self) -> tuple[str, Color, Color, Color]:
         current = THEMES[self.theme_index]
         if self.theme_transition_timer <= 0.0:
@@ -918,6 +1032,7 @@ class SketchHopperSystemsMixin:
             self._mix_color(previous[2], current[2], mix),
             self._mix_color(previous[3], current[3], mix),
         )
+
     @staticmethod
     def _mix_color(a: Color, b: Color, t: float) -> Color:
         return (

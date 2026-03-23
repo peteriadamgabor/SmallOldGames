@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import itertools
 import math
+import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import unittest
 
 import glfw
 
-from smalloldgames.games.sketch_hopper import BlackHole, SketchHopperScene, Monster, Pickup, Projectile
 from smalloldgames.data.storage import ScoreRepository
 from smalloldgames.engine.input import InputState
+from smalloldgames.games.sketch_hopper import BlackHole, Monster, Pickup, Projectile, SketchHopperScene
 
 
 class SketchHopperTests(unittest.TestCase):
@@ -41,7 +42,7 @@ class SketchHopperTests(unittest.TestCase):
         self.assertTrue(
             all(
                 abs(current.x - previous.x) <= scene.path_max_shift + 0.001
-                for previous, current in zip(anchors, anchors[1:])
+                for previous, current in itertools.pairwise(anchors)
             )
         )
 
@@ -96,7 +97,9 @@ class SketchHopperTests(unittest.TestCase):
         scene.highest_pickup_y = -2000.0
         scene._spawn_platforms()
         scene._spawn_pickups()
-        self.assertTrue(any(pickup.y >= max(scene.pickup_min_height, scene.player.y + 160.0) for pickup in scene.pickups))
+        self.assertTrue(
+            any(pickup.y >= max(scene.pickup_min_height, scene.player.y + 160.0) for pickup in scene.pickups)
+        )
 
     def test_pickups_do_not_spawn_too_early(self) -> None:
         scene = self.make_scene()
@@ -132,8 +135,14 @@ class SketchHopperTests(unittest.TestCase):
         spawned = [platform for platform in scene.platforms if platform.y > previous_top]
         for index, first in enumerate(spawned):
             for second in spawned[index + 1 :]:
-                overlaps_x = first.x < second.x + second.width + scene.overlap_x_padding and first.x + first.width + scene.overlap_x_padding > second.x
-                overlaps_y = first.y < second.y + second.height + scene.overlap_y_padding and first.y + first.height + scene.overlap_y_padding > second.y
+                overlaps_x = (
+                    first.x < second.x + second.width + scene.overlap_x_padding
+                    and first.x + first.width + scene.overlap_x_padding > second.x
+                )
+                overlaps_y = (
+                    first.y < second.y + second.height + scene.overlap_y_padding
+                    and first.y + first.height + scene.overlap_y_padding > second.y
+                )
                 self.assertFalse(overlaps_x and overlaps_y)
 
     def test_landing_on_platform_restores_jump_velocity(self) -> None:
@@ -380,6 +389,7 @@ class SketchHopperTests(unittest.TestCase):
             scene.update(0.0, inputs)
             self.assertFalse(scene.sound_enabled)
             self.assertFalse(repository.get_sound_enabled())
+            repository.close()
 
     def test_pause_menu_can_switch_to_balance_page(self) -> None:
         scene = self.make_scene()
@@ -473,6 +483,7 @@ class SketchHopperTests(unittest.TestCase):
             self.assertEqual(scene.best_score, 321)
             self.assertIsNotNone(scene.latest_rank)
             self.assertEqual(repository.top_scores("sketch_hopper", limit=1)[0].player_name, "ROCKET")
+            repository.close()
 
     def test_zero_score_game_over_text_does_not_claim_board_update(self) -> None:
         scene = self.make_scene()

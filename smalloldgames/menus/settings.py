@@ -2,19 +2,17 @@ from __future__ import annotations
 
 import glfw
 
-from smalloldgames.engine import InputState
-from smalloldgames.engine import Scene
-from smalloldgames.rendering.primitives import DrawList
 from smalloldgames.data.storage import ScoreRepository
+from smalloldgames.engine import InputState, Scene
+from smalloldgames.rendering.primitives import DrawList
 
-from .components import BASE_PANEL, draw_button, draw_panel
 from .common import (
-    ACCENT,
     GOOD,
     TEXT_LIGHT,
     TEXT_MUTED,
     draw_menu_background,
 )
+from .components import BASE_PANEL, draw_button, draw_panel
 
 
 class SettingsScene:

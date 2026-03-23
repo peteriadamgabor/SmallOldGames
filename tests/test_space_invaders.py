@@ -26,6 +26,7 @@ class SpaceInvadersTests(unittest.TestCase):
         ax = scene.grid_x + alien.col * 40.0
         ay = scene.grid_y + alien.row * 34.0
         from smalloldgames.games.space_invaders_game.scene import Bullet
+
         scene.bullets.append(Bullet(x=ax, y=ay))
         scene._update_bullets(1.0 / 120.0)
         self.assertFalse(alien.alive)
@@ -33,7 +34,8 @@ class SpaceInvadersTests(unittest.TestCase):
 
     def test_bomb_kills_player(self) -> None:
         scene = _make_scene()
-        from smalloldgames.games.space_invaders_game.scene import Bomb, PLAYER_Y, PLAYER_H
+        from smalloldgames.games.space_invaders_game.scene import PLAYER_H, PLAYER_Y, Bomb
+
         scene.bombs.append(Bomb(x=scene.player_x, y=PLAYER_Y + PLAYER_H * 0.5))
         scene._update_bombs(1.0 / 120.0)
         self.assertEqual(scene.lives, 2)
@@ -50,7 +52,8 @@ class SpaceInvadersTests(unittest.TestCase):
 
     def test_player_cannot_move_past_edges(self) -> None:
         scene = _make_scene()
-        from smalloldgames.games.space_invaders_game.scene import PLAY_LEFT, PLAY_RIGHT, PLAYER_W
+        from smalloldgames.games.space_invaders_game.scene import PLAY_LEFT, PLAYER_W
+
         scene.player_x = 0.0
         inputs = InputState()
         scene._update_player(1.0, inputs)
@@ -61,8 +64,12 @@ class SpaceInvadersTests(unittest.TestCase):
         shield = scene.shields[0]
         initial_count = len(shield)
         from smalloldgames.games.space_invaders_game.scene import (
-            Bullet, SHIELD_POSITIONS, SHIELD_Y, SHIELD_BLOCK,
+            SHIELD_BLOCK,
+            SHIELD_POSITIONS,
+            SHIELD_Y,
+            Bullet,
         )
+
         block = next(iter(shield))
         bx = SHIELD_POSITIONS[0] + block[0] * SHIELD_BLOCK + SHIELD_BLOCK * 0.5
         by = SHIELD_Y + block[1] * SHIELD_BLOCK + SHIELD_BLOCK * 0.5
@@ -81,7 +88,8 @@ class SpaceInvadersTests(unittest.TestCase):
         scene = _make_scene()
         initial_dir = scene.grid_dir
         # Force aliens near the right edge
-        from smalloldgames.games.space_invaders_game.scene import PLAY_RIGHT, ALIEN_W, ALIEN_SPACING_X
+        from smalloldgames.games.space_invaders_game.scene import ALIEN_SPACING_X, ALIEN_W, PLAY_RIGHT
+
         max_col = max(a.col for a in scene.aliens if a.alive)
         scene.grid_x = PLAY_RIGHT - max_col * ALIEN_SPACING_X - ALIEN_W * 0.5
         scene._step_aliens()
@@ -89,8 +97,11 @@ class SpaceInvadersTests(unittest.TestCase):
         self.assertEqual(scene.grid_dir, -initial_dir)
 
     def test_score_persists_on_game_over(self) -> None:
+        import os
+        import tempfile
+
         from smalloldgames.data.storage import ScoreRepository
-        import tempfile, os
+
         db_path = os.path.join(tempfile.mkdtemp(), "test.sqlite3")
         repo = ScoreRepository(database_path=db_path)
         try:
@@ -107,7 +118,8 @@ class SpaceInvadersTests(unittest.TestCase):
         scene = _make_scene()
         scene.ufo_active = True
         scene.ufo_x = 270.0
-        from smalloldgames.games.space_invaders_game.scene import Bullet, UFO_Y
+        from smalloldgames.games.space_invaders_game.scene import UFO_Y, Bullet
+
         scene.bullets.append(Bullet(x=270.0, y=UFO_Y))
         scene._update_ufo(1.0 / 120.0)
         self.assertGreater(scene.score, 0)
