@@ -37,7 +37,7 @@ jobs:
         run: ${{ matrix.build_cmd }}
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.archive }}
