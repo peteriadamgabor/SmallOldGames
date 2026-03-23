@@ -12,6 +12,7 @@ from vulkan import (
     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
     VK_FENCE_CREATE_SIGNALED_BIT,
     VK_FILTER_NEAREST,
+    VK_FORMAT_B8G8R8A8_UNORM,
     VK_FORMAT_R8G8B8A8_UNORM,
     VK_IMAGE_ASPECT_COLOR_BIT,
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
@@ -19,6 +20,7 @@ from vulkan import (
     VK_IMAGE_LAYOUT_UNDEFINED,
     VK_IMAGE_TILING_OPTIMAL,
     VK_IMAGE_TYPE_2D,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     VK_IMAGE_USAGE_SAMPLED_BIT,
     VK_IMAGE_USAGE_TRANSFER_DST_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -98,7 +100,23 @@ class VulkanResources:
         self._create_sync_objects()
         self._create_gpu_timing_resources()
 
+    def create_frame_resources(self) -> None:
+        self._create_offscreen_resources()
+        self._update_post_descriptor_set()
+
+    def destroy_frame_resources(self) -> None:
+        if self.renderer.device is not None and self.renderer.offscreen_view is not None:
+            vkDestroyImageView(self.renderer.device, self.renderer.offscreen_view, None)
+            self.renderer.offscreen_view = None
+        if self.renderer.device is not None and self.renderer.offscreen_image is not None:
+            vkDestroyImage(self.renderer.device, self.renderer.offscreen_image, None)
+            self.renderer.offscreen_image = None
+        if self.renderer.device is not None and self.renderer.offscreen_memory is not None:
+            vkFreeMemory(self.renderer.device, self.renderer.offscreen_memory, None)
+            self.renderer.offscreen_memory = None
+
     def close(self) -> None:
+        self.destroy_frame_resources()
         if self.renderer.device is not None and self.renderer.image_available is not None:
             vkDestroySemaphore(self.renderer.device, self.renderer.image_available, None)
         if self.renderer.device is not None and self.renderer.render_finished is not None:
@@ -217,19 +235,21 @@ class VulkanResources:
         self.renderer.descriptor_pool = vkCreateDescriptorPool(
             self.renderer.device,
             VkDescriptorPoolCreateInfo(
-                maxSets=1,
-                pPoolSizes=[VkDescriptorPoolSize(type=VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorCount=1)],
+                maxSets=2,
+                pPoolSizes=[VkDescriptorPoolSize(type=VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorCount=2)],
             ),
             None,
         )
-        self.renderer.descriptor_set = vkAllocateDescriptorSets(
+        descriptor_sets = vkAllocateDescriptorSets(
             self.renderer.device,
             VkDescriptorSetAllocateInfo(
                 descriptorPool=self.renderer.descriptor_pool,
-                descriptorSetCount=1,
-                pSetLayouts=[self.renderer.descriptor_set_layout],
+                descriptorSetCount=2,
+                pSetLayouts=[self.renderer.descriptor_set_layout, self.renderer.descriptor_set_layout],
             ),
-        )[0]
+        )
+        self.renderer.descriptor_set = descriptor_sets[0]
+        self.renderer.post_descriptor_set = descriptor_sets[1]
         image_info = VkDescriptorImageInfo(
             sampler=self.renderer.texture_sampler,
             imageView=self.renderer.texture_view,
@@ -237,6 +257,60 @@ class VulkanResources:
         )
         write = VkWriteDescriptorSet(
             dstSet=self.renderer.descriptor_set,
+            dstBinding=0,
+            dstArrayElement=0,
+            descriptorCount=1,
+            descriptorType=VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            pImageInfo=[image_info],
+        )
+        vkUpdateDescriptorSets(self.renderer.device, 1, [write], 0, None)
+
+    def _create_offscreen_resources(self) -> None:
+        image_info = VkImageCreateInfo(
+            imageType=VK_IMAGE_TYPE_2D,
+            format=VK_FORMAT_B8G8R8A8_UNORM,
+            extent=VkExtent3D(
+                width=self.renderer.swapchain_extent.width,
+                height=self.renderer.swapchain_extent.height,
+                depth=1,
+            ),
+            mipLevels=1,
+            arrayLayers=1,
+            samples=VK_SAMPLE_COUNT_1_BIT,
+            tiling=VK_IMAGE_TILING_OPTIMAL,
+            usage=VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            sharingMode=VK_SHARING_MODE_EXCLUSIVE,
+            initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
+        )
+        self.renderer.offscreen_image = vkCreateImage(self.renderer.device, image_info, None)
+        requirements = vkGetImageMemoryRequirements(self.renderer.device, self.renderer.offscreen_image)
+        self.renderer.offscreen_memory = vkAllocateMemory(
+            self.renderer.device,
+            VkMemoryAllocateInfo(
+                allocationSize=requirements.size,
+                memoryTypeIndex=find_memory_type(
+                    self.renderer,
+                    requirements.memoryTypeBits,
+                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                ),
+            ),
+            None,
+        )
+        vkBindImageMemory(self.renderer.device, self.renderer.offscreen_image, self.renderer.offscreen_memory, 0)
+        self.renderer.offscreen_view = create_image_view(
+            self.renderer,
+            self.renderer.offscreen_image,
+            VK_FORMAT_B8G8R8A8_UNORM,
+        )
+
+    def _update_post_descriptor_set(self) -> None:
+        image_info = VkDescriptorImageInfo(
+            sampler=self.renderer.texture_sampler,
+            imageView=self.renderer.offscreen_view,
+            imageLayout=VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        )
+        write = VkWriteDescriptorSet(
+            dstSet=self.renderer.post_descriptor_set,
             dstBinding=0,
             dstArrayElement=0,
             descriptorCount=1,
