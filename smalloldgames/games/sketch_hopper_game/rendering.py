@@ -7,20 +7,15 @@ from smalloldgames.rendering.primitives import DrawList
 from .shared import (
     BALANCE_FIELDS,
     BLACK_HOLE_SPRITE,
-    BlackHole,
     BOOTS_SPRITE,
-    Cloud,
     CLOUD_SPRITE,
     ENEMY_SHOT_SPRITE,
     HOPPER_SPRITE,
-    ImpactEffect,
     JETPACK_SPRITE,
-    Monster,
     MONSTER_SPRITE,
     PLATFORM_BROKEN_SPRITE,
     PLATFORM_MOVING_SPRITE,
     PLATFORM_STABLE_SPRITE,
-    Pickup,
     PROJECTILE_SPRITE,
     PROPELLER_SPRITE,
     ROCKET_SPRITE,
@@ -30,6 +25,11 @@ from .shared import (
     TEXT_DARK,
     TEXT_PANEL,
     UFO_SPRITE,
+    BlackHole,
+    Cloud,
+    ImpactEffect,
+    Monster,
+    Pickup,
 )
 
 
@@ -37,10 +37,26 @@ class SketchHopperRenderingMixin:
     def _render_feedback(self, draw: DrawList) -> None:
         if self.flash_timer > 0.0:
             alpha = (self.flash_timer / self.effect_flash_duration) * self.effect_flash_alpha
-            draw.quad(0, 0, draw.width, draw.height, (self.flash_color[0], self.flash_color[1], self.flash_color[2], alpha), world=False)
+            draw.quad(
+                0,
+                0,
+                draw.width,
+                draw.height,
+                (self.flash_color[0], self.flash_color[1], self.flash_color[2], alpha),
+                world=False,
+            )
         if self.feedback_timer > 0.0 and self.feedback_text:
             draw.quad(draw.width * 0.5 - 90.0, 838.0, 180.0, 30.0, (0.08, 0.11, 0.18, 0.56), world=False)
-            draw.text(draw.width * 0.5, 848.0, self.feedback_text, scale=2, color=(0.97, 0.98, 0.97, 1.0), world=False, centered=True)
+            draw.text(
+                draw.width * 0.5,
+                848.0,
+                self.feedback_text,
+                scale=2,
+                color=(0.97, 0.98, 0.97, 1.0),
+                world=False,
+                centered=True,
+            )
+
     def _render_platforms(self, draw: DrawList) -> None:
         for platform in self.platforms:
             sprite = PLATFORM_STABLE_SPRITE
@@ -131,6 +147,7 @@ class SketchHopperRenderingMixin:
                     (0.76, 0.89, 1.0, alpha),
                     world=True,
                 )
+
     def _render_pickups(self, draw: DrawList) -> None:
         for _, pickup in self.dynamic_world.components(Pickup).items():
             aura = (0.28, 0.77, 1.0, 0.10)
@@ -164,6 +181,7 @@ class SketchHopperRenderingMixin:
                 height=pickup.height,
                 world=True,
             )
+
     def _render_black_holes(self, draw: DrawList) -> None:
         for _, hole in self.dynamic_world.components(BlackHole).items():
             pulse = 1.0 + 0.08 * math.sin(hole.pulse_phase)
@@ -184,6 +202,7 @@ class SketchHopperRenderingMixin:
                 height=hole.height * pulse,
                 world=True,
             )
+
     def _render_clouds(self, draw: DrawList) -> None:
         for _, cloud in self.dynamic_world.components(Cloud).items():
             screen_y = cloud.y - self.camera_y * cloud.parallax
@@ -197,6 +216,7 @@ class SketchHopperRenderingMixin:
                 height=cloud.height,
                 world=False,
             )
+
     def _render_monsters(self, draw: DrawList) -> None:
         for _, monster in self.dynamic_world.components(Monster).items():
             sprite = UFO_SPRITE if monster.kind == "ufo" else MONSTER_SPRITE
@@ -212,6 +232,7 @@ class SketchHopperRenderingMixin:
                 world=True,
                 flip_x=monster.velocity_x < 0.0,
             )
+
     def _render_projectiles(self, draw: DrawList) -> None:
         for projectile in self.projectiles:
             sprite = ENEMY_SHOT_SPRITE if projectile.hostile else PROJECTILE_SPRITE
@@ -223,6 +244,7 @@ class SketchHopperRenderingMixin:
                 height=projectile.height,
                 world=True,
             )
+
     def _render_player(self, draw: DrawList) -> None:
         stretch = 1.0 + (self.player_stretch_timer / 0.24) * 0.18 if self.player_stretch_timer > 0.0 else 1.0
         squash = 1.0 + (self.player_squash_timer / 0.14) * 0.12 if self.player_squash_timer > 0.0 else 1.0
@@ -293,6 +315,7 @@ class SketchHopperRenderingMixin:
                 (0.46, 0.80, 1.0, 0.10 + 0.04 * math.sin(self.shield_timer * 6.0)),
                 world=True,
             )
+
     def _render_hud(self, draw: DrawList) -> None:
         theme_name, _, _, accent = self._current_theme()
         draw.quad(14, 892, 170, 52, TEXT_PANEL, world=False)
@@ -304,49 +327,107 @@ class SketchHopperRenderingMixin:
         else:
             draw.text(208, 922, "MOVE: A D OR ARROWS", scale=1.5, color=TEXT_DARK, world=False)
         if self.rocket_timer > 0.0:
-            draw.text(208, 902, f"ROCKET {int(self.rocket_timer * 10):02d}", scale=1.5, color=(0.97, 0.58, 0.24, 1.0), world=False)
+            draw.text(
+                208,
+                902,
+                f"ROCKET {int(self.rocket_timer * 10):02d}",
+                scale=1.5,
+                color=(0.97, 0.58, 0.24, 1.0),
+                world=False,
+            )
         elif self.jetpack_timer > 0.0:
-            draw.text(208, 902, f"JETPACK {int(self.jetpack_timer * 10):02d}", scale=1.5, color=TEXT_ACCENT, world=False)
+            draw.text(
+                208, 902, f"JETPACK {int(self.jetpack_timer * 10):02d}", scale=1.5, color=TEXT_ACCENT, world=False
+            )
         elif self.propeller_timer > 0.0:
             draw.text(208, 902, f"PROPELLER {int(self.propeller_timer * 10):02d}", scale=1.5, color=accent, world=False)
         elif self.shield_timer > 0.0:
-            draw.text(208, 902, f"SHIELD {int(self.shield_timer):02d}", scale=1.5, color=(0.42, 0.78, 1.0, 1.0), world=False)
+            draw.text(
+                208, 902, f"SHIELD {int(self.shield_timer):02d}", scale=1.5, color=(0.42, 0.78, 1.0, 1.0), world=False
+            )
         elif self.boots_charges_left > 0:
-            draw.text(208, 902, f"BOOTS {self.boots_charges_left}", scale=1.5, color=(0.98, 0.84, 0.34, 1.0), world=False)
+            draw.text(
+                208, 902, f"BOOTS {self.boots_charges_left}", scale=1.5, color=(0.98, 0.84, 0.34, 1.0), world=False
+            )
         else:
             draw.text(208, 902, "SPACE SHOOT  R / P", scale=1.5, color=TEXT_ACCENT, world=False)
         draw.quad(450, 892, 76, 52, (0.08, 0.11, 0.18, 0.52), world=False)
         draw.text(488, 919, theme_name, scale=1.5, color=(0.94, 0.96, 0.98, 1.0), world=False, centered=True)
         draw.text(488, 903, f"STAGE {self.theme_index + 1}", scale=1.5, color=accent, world=False, centered=True)
+
     def _render_impacts(self, draw: DrawList) -> None:
         for _, effect in self.dynamic_world.components(ImpactEffect).items():
             t = effect.timer / effect.duration
             radius = 10.0 + (1.0 - t) * 18.0
             alpha = effect.color[3] * t
-            draw.quad(effect.x - radius * 0.5, effect.y - 3.0, radius, 6.0, (effect.color[0], effect.color[1], effect.color[2], alpha), world=True)
-            draw.quad(effect.x - 3.0, effect.y - radius * 0.5, 6.0, radius, (effect.color[0], effect.color[1], effect.color[2], alpha), world=True)
+            draw.quad(
+                effect.x - radius * 0.5,
+                effect.y - 3.0,
+                radius,
+                6.0,
+                (effect.color[0], effect.color[1], effect.color[2], alpha),
+                world=True,
+            )
+            draw.quad(
+                effect.x - 3.0,
+                effect.y - radius * 0.5,
+                6.0,
+                radius,
+                (effect.color[0], effect.color[1], effect.color[2], alpha),
+                world=True,
+            )
             if effect.text:
-                draw.text(effect.x, effect.y + 10.0 + (1.0 - t) * 10.0, effect.text, scale=1.5, color=(effect.color[0], effect.color[1], effect.color[2], alpha), world=True, centered=True)
+                draw.text(
+                    effect.x,
+                    effect.y + 10.0 + (1.0 - t) * 10.0,
+                    effect.text,
+                    scale=1.5,
+                    color=(effect.color[0], effect.color[1], effect.color[2], alpha),
+                    world=True,
+                    centered=True,
+                )
+
     def _render_game_over(self, draw: DrawList) -> None:
         draw.quad(52, 330, 436, 250, (0.10, 0.12, 0.16, 0.78), world=False)
         draw.text(draw.width * 0.5, 510, "RUN OVER", scale=5, color=(0.97, 0.98, 0.97, 1.0), centered=True)
         draw.text(draw.width * 0.5, 458, f"FINAL SCORE {self.score}", scale=3, color=TEXT_ACCENT, centered=True)
-        draw.text(draw.width * 0.5, 424, f"PLAYER {self.player_name}", scale=2, color=(0.89, 0.92, 0.93, 1.0), centered=True)
-        draw.text(draw.width * 0.5, 394, self._game_over_rank_text(), scale=2, color=(0.97, 0.85, 0.29, 1.0), centered=True)
-        draw.text(draw.width * 0.5, 364, f"ALL TIME BEST {self.best_score}", scale=2, color=(0.89, 0.92, 0.93, 1.0), centered=True)
-        draw.text(draw.width * 0.5, 340, "PRESS R TO TRY AGAIN", scale=1.5, color=(0.89, 0.92, 0.93, 1.0), centered=True)
-        draw.text(draw.width * 0.5, 320, "PRESS ESC FOR LAUNCHER", scale=1.5, color=(0.73, 0.79, 0.86, 1.0), centered=True)
+        draw.text(
+            draw.width * 0.5, 424, f"PLAYER {self.player_name}", scale=2, color=(0.89, 0.92, 0.93, 1.0), centered=True
+        )
+        draw.text(
+            draw.width * 0.5, 394, self._game_over_rank_text(), scale=2, color=(0.97, 0.85, 0.29, 1.0), centered=True
+        )
+        draw.text(
+            draw.width * 0.5,
+            364,
+            f"ALL TIME BEST {self.best_score}",
+            scale=2,
+            color=(0.89, 0.92, 0.93, 1.0),
+            centered=True,
+        )
+        draw.text(
+            draw.width * 0.5, 340, "PRESS R TO TRY AGAIN", scale=1.5, color=(0.89, 0.92, 0.93, 1.0), centered=True
+        )
+        draw.text(
+            draw.width * 0.5, 320, "PRESS ESC FOR LAUNCHER", scale=1.5, color=(0.73, 0.79, 0.86, 1.0), centered=True
+        )
         if self.touch_controls_enabled:
             retry_x, retry_y, retry_w, retry_h = self._game_over_retry_rect()
             exit_x, exit_y, exit_w, exit_h = self._game_over_exit_rect()
             draw.quad(retry_x, retry_y, retry_w, retry_h, (0.15, 0.48, 0.23, 0.82), world=False)
             draw.quad(exit_x, exit_y, exit_w, exit_h, (0.18, 0.21, 0.28, 0.82), world=False)
-            draw.text(retry_x + retry_w * 0.5, retry_y + 18, "RETRY", scale=2, color=(0.96, 0.98, 0.96, 1.0), centered=True)
-            draw.text(exit_x + exit_w * 0.5, exit_y + 18, "LAUNCHER", scale=1.5, color=(0.86, 0.90, 0.94, 1.0), centered=True)
+            draw.text(
+                retry_x + retry_w * 0.5, retry_y + 18, "RETRY", scale=2, color=(0.96, 0.98, 0.96, 1.0), centered=True
+            )
+            draw.text(
+                exit_x + exit_w * 0.5, exit_y + 18, "LAUNCHER", scale=1.5, color=(0.86, 0.90, 0.94, 1.0), centered=True
+            )
+
     def _game_over_rank_text(self) -> str:
         if self.latest_rank is None:
             return "NO SCORE RECORDED"
         return f"LOCAL RANK {self.latest_rank}"
+
     def _render_touch_controls(self, draw: DrawList) -> None:
         left_x, left_y, left_w, left_h = self._left_touch_rect()
         right_x, right_y, right_w, right_h = self._right_touch_rect()
@@ -357,11 +438,13 @@ class SketchHopperRenderingMixin:
         draw.text(left_x + left_w * 0.5, left_y + 34, "LEFT", scale=2, color=(0.91, 0.94, 0.95, 1.0), centered=True)
         draw.text(right_x + right_w * 0.5, right_y + 34, "RIGHT", scale=2, color=(0.91, 0.94, 0.95, 1.0), centered=True)
         draw.text(shoot_x + shoot_w * 0.5, shoot_y + 34, "SHOOT", scale=2, color=(1.0, 0.89, 0.46, 1.0), centered=True)
+
     def _render_pause_button(self, draw: DrawList) -> None:
         x, y, width, height = self._pause_button_rect()
         draw.quad(x, y, width, height, (0.10, 0.12, 0.18, 0.50), world=False)
         draw.quad(x + 16, y + 10, 7, 28, (0.94, 0.97, 0.95, 1.0), world=False)
         draw.quad(x + 33, y + 10, 7, 28, (0.94, 0.97, 0.95, 1.0), world=False)
+
     def _render_pause_overlay(self, draw: DrawList) -> None:
         if self.pause_page == "balance":
             self._render_balance_overlay(draw)
@@ -373,31 +456,80 @@ class SketchHopperRenderingMixin:
         for rect, label, accent in (
             (self._pause_resume_rect(), "RESUME", (0.25, 0.63, 0.31, 0.82)),
             (self._pause_sound_rect(), f"SOUND {'ON' if self.sound_enabled else 'OFF'}", (0.23, 0.28, 0.42, 0.82)),
-            (self._pause_touch_rect(), f"TOUCH {'ON' if self.touch_controls_enabled else 'OFF'}", (0.23, 0.28, 0.42, 0.82)),
+            (
+                self._pause_touch_rect(),
+                f"TOUCH {'ON' if self.touch_controls_enabled else 'OFF'}",
+                (0.23, 0.28, 0.42, 0.82),
+            ),
             (self._pause_balance_rect(), "BALANCE", (0.36, 0.30, 0.14, 0.82)),
             (self._pause_exit_rect(), "LAUNCHER", (0.20, 0.18, 0.22, 0.82)),
         ):
             x, y, width, height = rect
             draw.quad(x, y, width, height, accent, world=False)
-            draw.text(x + width * 0.5, y + 18, label, scale=2 if label == "RESUME" else 1.5, color=(0.95, 0.97, 0.95, 1.0), centered=True)
-        draw.text(draw.width * 0.5, 284, "P OR ENTER RESUMES   S SOUND   T TOUCH   B BALANCE", scale=1.5, color=(0.73, 0.79, 0.86, 1.0), centered=True)
+            draw.text(
+                x + width * 0.5,
+                y + 18,
+                label,
+                scale=2 if label == "RESUME" else 1.5,
+                color=(0.95, 0.97, 0.95, 1.0),
+                centered=True,
+            )
+        draw.text(
+            draw.width * 0.5,
+            284,
+            "P OR ENTER RESUMES   S SOUND   T TOUCH   B BALANCE",
+            scale=1.5,
+            color=(0.73, 0.79, 0.86, 1.0),
+            centered=True,
+        )
+
     def _render_balance_overlay(self, draw: DrawList) -> None:
         draw.quad(42, 170, 456, 560, (0.07, 0.09, 0.14, 0.88), world=False)
         self._render_pause_tabs(draw)
         draw.text(draw.width * 0.5, 676, "BALANCE", scale=5, color=(0.96, 0.98, 0.96, 1.0), centered=True)
-        draw.text(draw.width * 0.5, 642, "LIVE SPAWN AND PROGRESSION TUNING", scale=1.5, color=(0.82, 0.86, 0.92, 1.0), centered=True)
+        draw.text(
+            draw.width * 0.5,
+            642,
+            "LIVE SPAWN AND PROGRESSION TUNING",
+            scale=1.5,
+            color=(0.82, 0.86, 0.92, 1.0),
+            centered=True,
+        )
         for index, (label, field_name, _) in enumerate(BALANCE_FIELDS):
             x, y, width, height = self._balance_row_rect(index)
             active = index == self.balance_index
             draw.quad(x, y, width, height, (0.15, 0.18, 0.26, 0.82 if active else 0.52), world=False)
             draw.text(x + 14, y + 15, label, scale=1.5, color=(0.96, 0.97, 0.97, 1.0), world=False)
-            draw.text(x + 208, y + 15, self._format_balance_value(getattr(self.config, field_name)), scale=1.5, color=(0.96, 0.84, 0.38, 1.0), world=False)
+            draw.text(
+                x + 208,
+                y + 15,
+                self._format_balance_value(getattr(self.config, field_name)),
+                scale=1.5,
+                color=(0.96, 0.84, 0.38, 1.0),
+                world=False,
+            )
             minus = self._balance_minus_rect(index)
             plus = self._balance_plus_rect(index)
             draw.quad(*minus, (0.24, 0.28, 0.40, 0.84), world=False)
             draw.quad(*plus, (0.24, 0.28, 0.40, 0.84), world=False)
-            draw.text(minus[0] + minus[2] * 0.5, minus[1] + 12.0, "-", scale=2, color=(0.96, 0.97, 0.97, 1.0), world=False, centered=True)
-            draw.text(plus[0] + plus[2] * 0.5, plus[1] + 12.0, "+", scale=2, color=(0.96, 0.97, 0.97, 1.0), world=False, centered=True)
+            draw.text(
+                minus[0] + minus[2] * 0.5,
+                minus[1] + 12.0,
+                "-",
+                scale=2,
+                color=(0.96, 0.97, 0.97, 1.0),
+                world=False,
+                centered=True,
+            )
+            draw.text(
+                plus[0] + plus[2] * 0.5,
+                plus[1] + 12.0,
+                "+",
+                scale=2,
+                color=(0.96, 0.97, 0.97, 1.0),
+                world=False,
+                centered=True,
+            )
         for rect, label, accent in (
             (self._balance_save_rect(), "SAVE", (0.22, 0.48, 0.28, 0.86)),
             (self._balance_reload_rect(), "RELOAD", (0.22, 0.35, 0.48, 0.86)),
@@ -409,7 +541,15 @@ class SketchHopperRenderingMixin:
             (self._balance_back_rect(), "BACK", (0.20, 0.18, 0.24, 0.86)),
         ):
             draw.quad(*rect, accent, world=False)
-            draw.text(rect[0] + rect[2] * 0.5, rect[1] + 14.0, label, scale=1.5, color=(0.96, 0.97, 0.97, 1.0), world=False, centered=True)
+            draw.text(
+                rect[0] + rect[2] * 0.5,
+                rect[1] + 14.0,
+                label,
+                scale=1.5,
+                color=(0.96, 0.97, 0.97, 1.0),
+                world=False,
+                centered=True,
+            )
         draw.text(
             draw.width * 0.5,
             194,
@@ -418,6 +558,7 @@ class SketchHopperRenderingMixin:
             color=(0.73, 0.79, 0.86, 1.0),
             centered=True,
         )
+
     def _render_pause_tabs(self, draw: DrawList) -> None:
         settings_rect = self._pause_settings_tab_rect()
         balance_rect = self._pause_balance_tab_rect()

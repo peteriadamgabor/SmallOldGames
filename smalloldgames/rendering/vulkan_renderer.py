@@ -36,9 +36,9 @@ from vulkan import (
     VK_FENCE_CREATE_SIGNALED_BIT,
     VK_FILTER_NEAREST,
     VK_FORMAT_B8G8R8A8_UNORM,
-    VK_FORMAT_R32G32B32A32_SFLOAT,
-    VK_FORMAT_R32G32_SFLOAT,
     VK_FORMAT_R8G8B8A8_UNORM,
+    VK_FORMAT_R32G32_SFLOAT,
+    VK_FORMAT_R32G32B32A32_SFLOAT,
     VK_FRONT_FACE_COUNTER_CLOCKWISE,
     VK_IMAGE_ASPECT_COLOR_BIT,
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -419,8 +419,7 @@ class VulkanRenderer:
         if not required_extensions:
             raise RuntimeError("GLFW did not provide Vulkan surface extensions.")
         extension_names = [
-            extension.decode() if isinstance(extension, bytes) else extension
-            for extension in required_extensions
+            extension.decode() if isinstance(extension, bytes) else extension for extension in required_extensions
         ]
 
         app_info = VkApplicationInfo(
@@ -440,9 +439,13 @@ class VulkanRenderer:
     def _load_instance_extensions(self) -> None:
         self.fp_destroy_surface = vkGetInstanceProcAddr(self.instance, "vkDestroySurfaceKHR")
         self.fp_get_surface_support = vkGetInstanceProcAddr(self.instance, "vkGetPhysicalDeviceSurfaceSupportKHR")
-        self.fp_get_surface_capabilities = vkGetInstanceProcAddr(self.instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR")
+        self.fp_get_surface_capabilities = vkGetInstanceProcAddr(
+            self.instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"
+        )
         self.fp_get_surface_formats = vkGetInstanceProcAddr(self.instance, "vkGetPhysicalDeviceSurfaceFormatsKHR")
-        self.fp_get_surface_present_modes = vkGetInstanceProcAddr(self.instance, "vkGetPhysicalDeviceSurfacePresentModesKHR")
+        self.fp_get_surface_present_modes = vkGetInstanceProcAddr(
+            self.instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"
+        )
 
     def _create_surface(self) -> None:
         surface_ptr = ffi.new("VkSurfaceKHR*")
@@ -574,7 +577,9 @@ class VulkanRenderer:
         )
         self.swapchain = self.fp_create_swapchain(self.device, create_info, None)
         self.swapchain_images = list(self.fp_get_swapchain_images(self.device, self.swapchain))
-        self.swapchain_image_views = [self._create_image_view(image, self.swapchain_format) for image in self.swapchain_images]
+        self.swapchain_image_views = [
+            self._create_image_view(image, self.swapchain_format) for image in self.swapchain_images
+        ]
 
     def _choose_surface_format(self, formats: list[VkSurfaceFormatKHR]) -> VkSurfaceFormatKHR:
         for surface_format in formats:
@@ -710,7 +715,9 @@ class VulkanRenderer:
                 0,
                 VK_ACCESS_TRANSFER_WRITE_BIT,
             )
-            self._copy_buffer_to_image(staging_buffer, self.texture_image, self.sprite_atlas.width, self.sprite_atlas.height)
+            self._copy_buffer_to_image(
+                staging_buffer, self.texture_image, self.sprite_atlas.width, self.sprite_atlas.height
+            )
             self._transition_image_layout(
                 self.texture_image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -801,7 +808,9 @@ class VulkanRenderer:
             )
             attribute_descriptions = [
                 VkVertexInputAttributeDescription(location=0, binding=0, format=VK_FORMAT_R32G32_SFLOAT, offset=0),
-                VkVertexInputAttributeDescription(location=1, binding=0, format=VK_FORMAT_R32G32B32A32_SFLOAT, offset=8),
+                VkVertexInputAttributeDescription(
+                    location=1, binding=0, format=VK_FORMAT_R32G32B32A32_SFLOAT, offset=8
+                ),
                 VkVertexInputAttributeDescription(location=2, binding=0, format=VK_FORMAT_R32G32_SFLOAT, offset=24),
             ]
             vertex_input = VkPipelineVertexInputStateCreateInfo(
@@ -1094,7 +1103,9 @@ class VulkanRenderer:
                 commandBufferCount=1,
             ),
         )[0]
-        vkBeginCommandBuffer(command_buffer, VkCommandBufferBeginInfo(flags=VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT))
+        vkBeginCommandBuffer(
+            command_buffer, VkCommandBufferBeginInfo(flags=VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+        )
         return command_buffer
 
     def _end_single_use_command_buffer(self, command_buffer) -> None:

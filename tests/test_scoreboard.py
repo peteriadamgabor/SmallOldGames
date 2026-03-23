@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import gc
-from pathlib import Path
-from tempfile import TemporaryDirectory
 import unittest
 import warnings
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from smalloldgames.data.storage import ScoreRepository
 
@@ -19,7 +19,9 @@ class ScoreRepositoryTests(unittest.TestCase):
 
             self.assertEqual(repository.best_score("sketch_hopper"), 420)
             self.assertEqual([entry.score for entry in repository.top_scores("sketch_hopper")], [420, 260, 180])
-            self.assertEqual([entry.player_name for entry in repository.top_scores("sketch_hopper")], ["BBB", "CCC", "AAA"])
+            self.assertEqual(
+                [entry.player_name for entry in repository.top_scores("sketch_hopper")], ["BBB", "CCC", "AAA"]
+            )
             repository.close()
 
     def test_record_score_returns_rank(self) -> None:

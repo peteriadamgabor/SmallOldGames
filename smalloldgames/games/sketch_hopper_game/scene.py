@@ -1,20 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import random
+from collections.abc import Callable
 
 import glfw
 
 from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import ComponentListProxy, World
-from smalloldgames.engine import InputState
-from smalloldgames.engine import Scene
+from smalloldgames.engine import ComponentListProxy, InputState, Scene, World
 from smalloldgames.engine.audio import AudioEngine
 from smalloldgames.rendering.primitives import DrawList
 
 from .config import SketchHopperConfig, load_sketch_hopper_config
 from .rendering import SketchHopperRenderingMixin
-from .shared import Color, ImpactEffect, Platform, Player, Projectile, Monster, Cloud, Pickup, BlackHole
+from .shared import BlackHole, Cloud, Color, ImpactEffect, Monster, Pickup, Platform, Player, Projectile
 from .systems import SketchHopperSystemsMixin
 from .ui import SketchHopperUIMixin
 

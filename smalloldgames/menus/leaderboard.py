@@ -2,24 +2,22 @@ from __future__ import annotations
 
 import glfw
 
-from smalloldgames.engine import GameDefinition
-from smalloldgames.engine import InputState
-from smalloldgames.engine import Scene
-from smalloldgames.rendering.primitives import DrawList
 from smalloldgames.data.storage import ScoreEntry, ScoreRepository, ScoreStats
+from smalloldgames.engine import GameDefinition, InputState, Scene
+from smalloldgames.rendering.primitives import DrawList
 
-from .components import BASE_PANEL, draw_button, draw_panel
 from .common import (
     ACCENT,
     BLACK_HOLE_SPRITE,
     CLOUD_SPRITE,
-    HOPPER_SPRITE,
     GOOD,
+    HOPPER_SPRITE,
     MONSTER_SPRITE,
     TEXT_LIGHT,
     TEXT_MUTED,
     draw_menu_background,
 )
+from .components import BASE_PANEL, draw_button, draw_panel
 
 
 class LeaderboardScene:
@@ -78,11 +76,11 @@ class LeaderboardScene:
     def render(self, draw: DrawList) -> None:
         draw_menu_background(draw)
         self._render_backdrop(draw)
-        
+
         # Game cycling arrows
         draw.text(64, 874, "<", scale=5, color=ACCENT, centered=True)
         draw.text(476, 874, ">", scale=5, color=ACCENT, centered=True)
-        
+
         draw.text(draw.width * 0.5, 874, f"{self.game.title}", scale=5, color=TEXT_LIGHT, centered=True)
         draw.text(draw.width * 0.5, 838, "LOCAL SQLITE BOARD", scale=2, color=TEXT_MUTED, centered=True)
 

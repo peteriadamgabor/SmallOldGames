@@ -19,11 +19,11 @@ __all__ = [
     "BlackHole",
     "Cloud",
     "Color",
-    "SketchHopperScene",
     "ImpactEffect",
     "Monster",
     "Pickup",
     "Platform",
     "Player",
     "Projectile",
+    "SketchHopperScene",
 ]

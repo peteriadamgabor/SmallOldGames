@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-import re
 
 from .bitmap_font import FONT_5X7
 
@@ -99,8 +99,7 @@ def build_sprite_atlas(named_sprites: dict[str, Sprite], *, padding: int = 1) ->
 
     atlas_height = max(64, used_height + 1 + padding)
     pixels: list[list[tuple[int, int, int, int]]] = [
-        [(0, 0, 0, 0) for _ in range(atlas_width)]
-        for _ in range(atlas_height)
+        [(0, 0, 0, 0) for _ in range(atlas_width)] for _ in range(atlas_height)
     ]
 
     # Reserve a white texel for flat-color geometry.

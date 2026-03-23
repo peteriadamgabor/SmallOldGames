@@ -12,6 +12,39 @@ dependencies = [
 build = [
     "pyinstaller>=6.11.0",
 ]
+dev = [
+    "ruff>=0.9.0",
+    "mypy>=1.14.0",
+]
 
 [project.scripts]
 smalloldgames = "smalloldgames.engine.app:main"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "smalloldgames.rendering.vulkan_renderer",
+    "smalloldgames.games.sketch_hopper_game.systems",
+    "smalloldgames.games.sketch_hopper_game.rendering",
+    "smalloldgames.games.sketch_hopper_game.ui",
+    "smalloldgames.games.sketch_hopper_game.scene",
+    "smalloldgames.games.sketch_hopper_game.config",
+    "smalloldgames.assets.sprites",
+    "smalloldgames.engine.app",
+    "smalloldgames.engine.audio",
+]
+disable_error_code = ["attr-defined", "misc", "arg-type", "assignment", "has-type", "union-attr", "override"]

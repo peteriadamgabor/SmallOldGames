@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
 import sqlite3
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,7 +41,7 @@ class ScoreRepository:
             raise ValueError("Score must be non-negative.")
 
         safe_name = self._normalize_player_name(player_name or self.get_player_name())
-        played_at = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        played_at = datetime.now(UTC).strftime("%Y-%m-%d")
         with self._connection() as connection:
             connection.execute(
                 "INSERT INTO scores (game, player_name, score, played_at) VALUES (?, ?, ?, ?)",
@@ -85,7 +85,7 @@ class ScoreRepository:
                 """,
                 (game,),
             ).fetchone()
-        return ScoreStats(total_runs=int(row[0]), average_score=int(round(row[1])), best_score=int(row[2]))
+        return ScoreStats(total_runs=int(row[0]), average_score=round(row[1]), best_score=int(row[2]))
 
     def get_player_name(self) -> str:
         with self._connection() as connection:
@@ -147,15 +147,9 @@ class ScoreRepository:
                 )
                 """
             )
-            connection.execute(
-                "INSERT OR IGNORE INTO settings (key, value) VALUES ('player_name', 'PLAYER')"
-            )
-            connection.execute(
-                "INSERT OR IGNORE INTO settings (key, value) VALUES ('sound_enabled', '1')"
-            )
-            connection.execute(
-                "INSERT OR IGNORE INTO settings (key, value) VALUES ('touch_controls_enabled', '1')"
-            )
+            connection.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('player_name', 'PLAYER')")
+            connection.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('sound_enabled', '1')")
+            connection.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('touch_controls_enabled', '1')")
 
     def _connect(self) -> sqlite3.Connection:
         if self._db is None:
@@ -179,10 +173,8 @@ class ScoreRepository:
         self._db = None
 
     def __del__(self) -> None:
-        try:
+        with suppress(Exception):
             self.close()
-        except Exception:
-            pass
 
     @staticmethod
     def _normalize_player_name(player_name: str) -> str:

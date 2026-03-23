@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from array import array
-from pathlib import Path
-from threading import Event, Lock, Thread
+import contextlib
 import math
 import shutil
 import subprocess
 import sys
 import tempfile
 import wave
-
+from array import array
+from pathlib import Path
+from threading import Event, Lock, Thread
 
 _SAMPLE_RATE = 22_050
 _MAX_ACTIVE_EFFECTS = 8
@@ -119,7 +119,12 @@ class AudioEngine:
         music_path = self._ensure_music(track_name, segments)
         self._current_music = track_name
         if self._winsound is not None:
-            flags = self._winsound.SND_FILENAME | self._winsound.SND_ASYNC | self._winsound.SND_LOOP | self._winsound.SND_NODEFAULT
+            flags = (
+                self._winsound.SND_FILENAME
+                | self._winsound.SND_ASYNC
+                | self._winsound.SND_LOOP
+                | self._winsound.SND_NODEFAULT
+            )
             self._winsound.PlaySound(str(music_path), flags)
             return
         if self._player is None:
@@ -136,10 +141,8 @@ class AudioEngine:
         with self._music_lock:
             process = self._music_process
         if process is not None:
-            try:
+            with contextlib.suppress(OSError):
                 process.terminate()
-            except OSError:
-                pass
         if self._music_thread is not None:
             self._music_thread.join(timeout=0.2)
             self._music_thread = None

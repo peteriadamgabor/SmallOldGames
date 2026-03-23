@@ -5,19 +5,18 @@ import time
 
 import glfw
 
-from smalloldgames.assets import SHADERS_DIR, font_glyphs_from_atlas, COMBINED_ATLAS
+from smalloldgames.assets import COMBINED_ATLAS, SHADERS_DIR, font_glyphs_from_atlas
 from smalloldgames.data.storage import ScoreRepository
 from smalloldgames.games.sketch_hopper import SketchHopperScene
 from smalloldgames.games.snake import SnakeScene
 from smalloldgames.games.space_invaders import SpaceInvadersScene
-from smalloldgames.menus import LeaderboardScene, LauncherScene, SettingsScene
+from smalloldgames.menus import LauncherScene, LeaderboardScene, SettingsScene
 from smalloldgames.rendering.primitives import DrawList
 from smalloldgames.rendering.vulkan_renderer import VulkanRenderer
 
 from .audio import AudioEngine
 from .game_registry import GameDefinition, GameRegistry
 from .input import InputState
-from .scene import Scene
 
 WINDOW_WIDTH = 540
 WINDOW_HEIGHT = 960

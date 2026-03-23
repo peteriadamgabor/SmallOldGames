@@ -1,2 +1,1 @@
 """Small Old Games package."""
-

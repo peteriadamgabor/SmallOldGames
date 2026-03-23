@@ -7,11 +7,11 @@ from .sprites import PackedSprite, Sprite, SpriteAtlas, build_sprite_atlas, font
 __all__ = [
     "COMBINED_ATLAS",
     "CONFIG_DIR",
-    "PackedSprite",
     "PROJECT_ASSETS_DIR",
     "PROJECT_ROOT",
     "SHADERS_DIR",
     "SPRITES_DIR",
+    "PackedSprite",
     "Sprite",
     "SpriteAtlas",
     "build_sprite_atlas",

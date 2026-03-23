@@ -1,24 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass, replace
-import math
-import random
-
-import glfw
-
-from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import InputState
-from smalloldgames.engine.audio import AudioEngine
-from smalloldgames.rendering.primitives import DrawList
+from dataclasses import dataclass
 
 from .assets import SKETCH_HOPPER_ATLAS
-from .config import (
-    SketchHopperConfig,
-    load_sketch_hopper_config,
-    reset_sketch_hopper_config,
-    save_sketch_hopper_config,
-)
 
 Color = tuple[float, float, float, float]
 
