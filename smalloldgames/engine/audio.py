@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import contextlib
 import math
-import shutil
-import subprocess
-import sys
-import tempfile
-import wave
 from array import array
-from pathlib import Path
-from threading import Event, Lock, Thread
+from collections.abc import Generator
+from dataclasses import dataclass
+from threading import Lock
+from typing import Protocol
+
+import miniaudio
 
 _SAMPLE_RATE = 22_050
 _MAX_ACTIVE_EFFECTS = 8
@@ -69,19 +67,134 @@ _MUSIC_TRACKS: dict[str, tuple[tuple[float, float, float], ...]] = {
 }
 
 
+class AudioBackend(Protocol):
+    def play_effect(self, pcm: bytes) -> bool: ...
+
+    def play_music(self, pcm: bytes) -> None: ...
+
+    def stop_music(self) -> None: ...
+
+    def stop_effects(self) -> None: ...
+
+    def close(self) -> None: ...
+
+
+@dataclass(slots=True)
+class _Voice:
+    samples: array
+    cursor: int = 0
+    loop: bool = False
+
+
+class _NullAudioBackend:
+    def play_effect(self, pcm: bytes) -> bool:
+        return False
+
+    def play_music(self, pcm: bytes) -> None:
+        return None
+
+    def stop_music(self) -> None:
+        return None
+
+    def stop_effects(self) -> None:
+        return None
+
+    def close(self) -> None:
+        return None
+
+
+class _MiniaudioBackend:
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._closed = False
+        self._effects: list[_Voice] = []
+        self._music: _Voice | None = None
+        self._device = miniaudio.PlaybackDevice(
+            output_format=miniaudio.SampleFormat.SIGNED16,
+            nchannels=1,
+            sample_rate=_SAMPLE_RATE,
+            buffersize_msec=70,
+            app_name="SmallOldGames",
+        )
+        self._stream = self._stream_generator()
+        next(self._stream)
+        self._device.start(self._stream)
+
+    def play_effect(self, pcm: bytes) -> bool:
+        voice = _voice_from_pcm(pcm)
+        with self._lock:
+            self._effects = [effect for effect in self._effects if effect.cursor < len(effect.samples)]
+            if len(self._effects) >= _MAX_ACTIVE_EFFECTS:
+                return False
+            self._effects.append(voice)
+        return True
+
+    def play_music(self, pcm: bytes) -> None:
+        with self._lock:
+            self._music = _voice_from_pcm(pcm, loop=True)
+
+    def stop_music(self) -> None:
+        with self._lock:
+            self._music = None
+
+    def stop_effects(self) -> None:
+        with self._lock:
+            self._effects.clear()
+
+    def close(self) -> None:
+        with self._lock:
+            self._closed = True
+            self._music = None
+            self._effects.clear()
+        self._device.close()
+
+    def _stream_generator(self) -> Generator[bytes | array, int]:
+        frame_count = yield b""
+        while True:
+            frame_count = yield self._mix_frames(frame_count)
+
+    def _mix_frames(self, frame_count: int) -> array:
+        if frame_count <= 0:
+            return array("h")
+        mixed = array("i", [0]) * frame_count
+        with self._lock:
+            if self._closed:
+                return array("h", [0]) * frame_count
+            music = self._music
+            effects = list(self._effects)
+        if music is not None:
+            self._mix_voice(mixed, music)
+        remaining_effects: list[_Voice] = []
+        for effect in effects:
+            if self._mix_voice(mixed, effect):
+                remaining_effects.append(effect)
+        with self._lock:
+            self._effects = remaining_effects
+            if music is not None and not music.loop and music.cursor >= len(music.samples):
+                self._music = None
+        return array("h", (_clamp_sample(sample) for sample in mixed))
+
+    @staticmethod
+    def _mix_voice(mixed: array, voice: _Voice) -> bool:
+        total_samples = len(voice.samples)
+        for index in range(len(mixed)):
+            if voice.cursor >= total_samples:
+                if not voice.loop:
+                    return False
+                voice.cursor = 0
+            mixed[index] += voice.samples[voice.cursor]
+            voice.cursor += 1
+        return True
+
+
 class AudioEngine:
     def __init__(self) -> None:
-        self._effects_dir = Path(tempfile.mkdtemp(prefix="smalloldgames-audio-"))
-        self._player = self._detect_player()
-        self._winsound = self._load_winsound()
         self.enabled = True
-        self._music_thread: Thread | None = None
-        self._music_stop = Event()
-        self._music_lock = Lock()
-        self._music_process: subprocess.Popen[bytes] | None = None
+        self._backend = _create_audio_backend()
         self._current_music: str | None = None
         self._requested_music: str | None = None
-        self._active_effects: list[subprocess.Popen[bytes]] = []
+        self._effect_cache: dict[str, bytes] = {}
+        self._music_cache: dict[str, bytes] = {}
 
     def play(self, effect_name: str) -> None:
         if not self.enabled:
@@ -89,156 +202,58 @@ class AudioEngine:
         segments = _EFFECTS.get(effect_name)
         if segments is None:
             return
-        sound_path = self._ensure_effect(effect_name, segments)
-        if self._winsound is not None:
-            flags = self._winsound.SND_FILENAME | self._winsound.SND_ASYNC | self._winsound.SND_NODEFAULT
-            self._winsound.PlaySound(str(sound_path), flags)
-            return
-        if self._player is None:
-            return
-        with self._music_lock:
-            self._reap_effects()
-            if len(self._active_effects) >= _MAX_ACTIVE_EFFECTS:
-                return
-        command = [*self._player, str(sound_path)]
-        try:
-            process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except OSError:
-            return
-        with self._music_lock:
-            self._active_effects.append(process)
+        self._backend.play_effect(self._effect_clip(effect_name, segments))
 
     def play_music(self, track_name: str | None) -> None:
-        with self._music_lock:
-            self._requested_music = track_name
-            if track_name == self._current_music:
-                return
+        self._requested_music = track_name
+        if track_name == self._current_music:
+            return
         self.stop_music()
         if not self.enabled or track_name is None:
             return
         segments = _MUSIC_TRACKS.get(track_name)
         if segments is None:
             return
-        music_path = self._ensure_music(track_name, segments)
-        with self._music_lock:
-            self._current_music = track_name
-        if self._winsound is not None:
-            flags = (
-                self._winsound.SND_FILENAME
-                | self._winsound.SND_ASYNC
-                | self._winsound.SND_LOOP
-                | self._winsound.SND_NODEFAULT
-            )
-            self._winsound.PlaySound(str(music_path), flags)
-            return
-        if self._player is None:
-            return
-        self._music_stop.clear()
-        self._music_thread = Thread(target=self._music_loop, args=(music_path,), daemon=True)
-        self._music_thread.start()
+        self._backend.play_music(self._music_clip(track_name, segments))
+        self._current_music = track_name
 
     def stop_music(self) -> None:
-        with self._music_lock:
-            self._current_music = None
-        if self._winsound is not None:
-            self._winsound.PlaySound(None, 0)
-        self._music_stop.set()
-        with self._music_lock:
-            process = self._music_process
-        if process is not None:
-            with contextlib.suppress(OSError):
-                process.terminate()
-        if self._music_thread is not None:
-            self._music_thread.join(timeout=0.2)
-            self._music_thread = None
-        with self._music_lock:
-            self._music_process = None
-        self._music_stop.clear()
+        self._backend.stop_music()
+        self._current_music = None
 
     def close(self) -> None:
         self.stop_music()
-        self._stop_effects()
-        shutil.rmtree(self._effects_dir, ignore_errors=True)
+        self._backend.stop_effects()
+        self._backend.close()
 
     def set_enabled(self, enabled: bool) -> None:
         self.enabled = enabled
         if not enabled:
             self.stop_music()
-            self._stop_effects()
-        else:
-            with self._music_lock:
-                requested = self._requested_music
-            if requested is not None:
-                self.play_music(requested)
+            self._backend.stop_effects()
+        elif self._requested_music is not None:
+            self.play_music(self._requested_music)
 
-    @staticmethod
-    def _load_winsound():
-        if sys.platform != "win32":
-            return None
-        try:
-            import winsound
-        except ImportError:
-            return None
-        return winsound
+    def _effect_clip(self, effect_name: str, segments: tuple[tuple[float, float, float], ...]) -> bytes:
+        clip = self._effect_cache.get(effect_name)
+        if clip is None:
+            clip = synthesize_pcm(segments)
+            self._effect_cache[effect_name] = clip
+        return clip
 
-    @staticmethod
-    def _detect_player() -> list[str] | None:
-        for command in (["paplay"], ["aplay", "-q"], ["afplay"]):
-            if shutil.which(command[0]):
-                return command
-        return None
+    def _music_clip(self, track_name: str, segments: tuple[tuple[float, float, float], ...]) -> bytes:
+        clip = self._music_cache.get(track_name)
+        if clip is None:
+            clip = synthesize_music_pcm(segments, loops=1)
+            self._music_cache[track_name] = clip
+        return clip
 
-    def _music_loop(self, music_path: Path) -> None:
-        while not self._music_stop.is_set():
-            command = [*self._player, str(music_path)]
-            process: subprocess.Popen[bytes] | None = None
-            try:
-                process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                with self._music_lock:
-                    self._music_process = process
-                process.wait()
-            except OSError:
-                break
-            finally:
-                with self._music_lock:
-                    if self._music_process is process:
-                        self._music_process = None
-            if self._music_stop.wait(0.05):
-                break
 
-    def _reap_effects(self) -> None:
-        self._active_effects = [process for process in self._active_effects if process.poll() is None]
-
-    def _stop_effects(self) -> None:
-        with self._music_lock:
-            effects = list(self._active_effects)
-        for process in effects:
-            if process.poll() is None:
-                try:
-                    process.terminate()
-                    process.wait(timeout=0.1)
-                except subprocess.TimeoutExpired:
-                    pass
-                except OSError:
-                    pass
-        with self._music_lock:
-            self._reap_effects()
-
-    def _ensure_effect(self, effect_name: str, segments: tuple[tuple[float, float, float], ...]) -> Path:
-        sound_path = self._effects_dir / f"{effect_name}.wav"
-        if sound_path.exists():
-            return sound_path
-        pcm = synthesize_pcm(segments)
-        _write_wave(sound_path, pcm)
-        return sound_path
-
-    def _ensure_music(self, track_name: str, segments: tuple[tuple[float, float, float], ...]) -> Path:
-        music_path = self._effects_dir / f"music_{track_name}.wav"
-        if music_path.exists():
-            return music_path
-        pcm = synthesize_music_pcm(segments, loops=4)
-        _write_wave(music_path, pcm)
-        return music_path
+def _create_audio_backend() -> AudioBackend:
+    try:
+        return _MiniaudioBackend()
+    except Exception:
+        return _NullAudioBackend()
 
 
 def synthesize_pcm(segments: tuple[tuple[float, float, float], ...]) -> bytes:
@@ -286,9 +301,11 @@ def synthesize_music_pcm(
     return samples.tobytes()
 
 
-def _write_wave(path: Path, pcm: bytes) -> None:
-    with wave.open(str(path), "wb") as wav_file:
-        wav_file.setnchannels(1)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(_SAMPLE_RATE)
-        wav_file.writeframes(pcm)
+def _voice_from_pcm(pcm: bytes, *, loop: bool = False) -> _Voice:
+    samples = array("h")
+    samples.frombytes(pcm)
+    return _Voice(samples=samples, loop=loop)
+
+
+def _clamp_sample(value: int) -> int:
+    return max(-32768, min(32767, value))

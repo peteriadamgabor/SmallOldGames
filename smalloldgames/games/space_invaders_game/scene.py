@@ -4,7 +4,7 @@ import random
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, Transition
+from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion, Transition
 from smalloldgames.menus.common import (
     ACCENT,
     BG_BOTTOM,
@@ -312,28 +312,10 @@ class SpaceInvadersScene:
 
         move = inputs.action_axis(GameAction.MOVE_LEFT, GameAction.MOVE_RIGHT)
 
-        if self.touch_controls_enabled and move == 0.0:
-            if inputs.action_held(GameAction.MOVE_LEFT):
-                move = -1.0
-            elif inputs.action_held(GameAction.MOVE_RIGHT):
-                move = 1.0
-            if inputs.pointer_down:
-                if inputs.pointer_in_rect(0, 0, 120, 180):
-                    move = -1.0
-                elif inputs.pointer_in_rect(420, 0, 120, 180):
-                    move = 1.0
-
         self.player_x += move * PLAYER_SPEED * dt
         self.player_x = max(PLAY_LEFT + PLAYER_W * 0.5, min(PLAY_RIGHT - PLAYER_W * 0.5, self.player_x))
 
         should_fire = inputs.action_pressed(GameAction.FIRE)
-        if (
-            self.touch_controls_enabled
-            and not should_fire
-            and inputs.pointer_pressed
-            and inputs.pointer_in_rect(170, 0, 200, 180)
-        ):
-            should_fire = True
 
         if should_fire and len(self.bullets) < MAX_PLAYER_BULLETS:
             self.bullets.append(Bullet(x=self.player_x, y=PLAYER_Y + PLAYER_H))
@@ -635,6 +617,15 @@ class SpaceInvadersScene:
         draw_button(draw, x=10, y=40, width=110, height=100, label="LEFT", label_scale=2)
         draw_button(draw, x=420, y=40, width=110, height=100, label="RIGHT", label_scale=2)
         draw_button(draw, x=190, y=40, width=160, height=100, label="FIRE", label_scale=3)
+
+    def touch_regions(self) -> tuple[TouchRegion, ...]:
+        if not self.touch_controls_enabled or self.game_over or self.paused:
+            return ()
+        return (
+            TouchRegion(0, 0, 120, 180, frozenset({GameAction.MOVE_LEFT})),
+            TouchRegion(420, 0, 120, 180, frozenset({GameAction.MOVE_RIGHT})),
+            TouchRegion(170, 0, 200, 180, frozenset({GameAction.FIRE})),
+        )
 
     def _render_overlay(self, draw: DrawList, title: str, subtitle: str) -> None:
         draw.quad(0, 0, draw.width, draw.height, (0, 0, 0, 0.6), world=False)
