@@ -40,6 +40,7 @@ class GameAction(IntEnum):
     RESTART = 21
     QUIT = 22
     DEBUG_TOGGLE = 23
+    POST_PROCESS_TOGGLE = 24
 
     # Shortcut keys
     LEADERBOARD = 30
@@ -69,6 +70,7 @@ _DEFAULT_KEY_MAP: dict[GameAction, frozenset[int]] = {
     GameAction.RESTART: frozenset({glfw.KEY_R}),
     GameAction.QUIT: frozenset({glfw.KEY_Q}),
     GameAction.DEBUG_TOGGLE: frozenset({glfw.KEY_F3}),
+    GameAction.POST_PROCESS_TOGGLE: frozenset({glfw.KEY_F4}),
     GameAction.LEADERBOARD: frozenset({glfw.KEY_L, glfw.KEY_TAB}),
     GameAction.SETTINGS: frozenset({glfw.KEY_P}),
     GameAction.SOUND_TOGGLE: frozenset({glfw.KEY_S}),

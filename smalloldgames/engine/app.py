@@ -110,6 +110,8 @@ class PlatformBootstrap(_AppComponent):
                 glfw.set_window_should_close(self.window, True)
             if self.inputs.action_pressed(GameAction.DEBUG_TOGGLE):
                 self._show_debug = not self._show_debug
+            if self.inputs.action_pressed(GameAction.POST_PROCESS_TOGGLE):
+                self.renderer.post_process_enabled = not self.renderer.post_process_enabled
 
     def on_cursor_pos(self, _window: glfw._GLFWwindow, xpos: float, ypos: float) -> None:
         window_width, window_height = glfw.get_window_size(self.window)

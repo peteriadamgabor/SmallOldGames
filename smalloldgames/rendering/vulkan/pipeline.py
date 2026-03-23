@@ -116,6 +116,7 @@ class VulkanPipeline:
         self._create_post_render_pass()
         self._create_scene_pipeline()
         self._create_post_pipeline()
+        self._create_copy_pipeline()
 
     def destroy_frame_resources(self) -> None:
         if self.renderer.scene_pipeline is not None:
@@ -124,6 +125,9 @@ class VulkanPipeline:
         if self.renderer.post_pipeline is not None:
             vkDestroyPipeline(self.renderer.device, self.renderer.post_pipeline, None)
             self.renderer.post_pipeline = None
+        if self.renderer.copy_pipeline is not None:
+            vkDestroyPipeline(self.renderer.device, self.renderer.copy_pipeline, None)
+            self.renderer.copy_pipeline = None
         if self.renderer.scene_pipeline_layout is not None:
             vkDestroyPipelineLayout(self.renderer.device, self.renderer.scene_pipeline_layout, None)
             self.renderer.scene_pipeline_layout = None
@@ -183,7 +187,11 @@ class VulkanPipeline:
             pClearValues=[clear_value],
         )
         vkCmdBeginRenderPass(command_buffer, post_render_pass_begin, VK_SUBPASS_CONTENTS_INLINE)
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, self.renderer.post_pipeline)
+        vkCmdBindPipeline(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            self.renderer.post_pipeline if self.renderer.post_process_enabled else self.renderer.copy_pipeline,
+        )
         vkCmdBindDescriptorSets(
             command_buffer,
             VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -467,6 +475,84 @@ class VulkanPipeline:
                 subpass=0,
             )
             self.renderer.post_pipeline = vkCreateGraphicsPipelines(
+                self.renderer.device, None, 1, [pipeline_info], None
+            )[0]
+        finally:
+            vkDestroyShaderModule(self.renderer.device, vert_module, None)
+            vkDestroyShaderModule(self.renderer.device, frag_module, None)
+
+    def _create_copy_pipeline(self) -> None:
+        vert_module = self._create_shader_module(self.renderer.shader_dir / "post.vert.spv")
+        frag_module = self._create_shader_module(self.renderer.shader_dir / "post_copy.frag.spv")
+        try:
+            stages = [
+                VkPipelineShaderStageCreateInfo(stage=VK_SHADER_STAGE_VERTEX_BIT, module=vert_module, pName=b"main"),
+                VkPipelineShaderStageCreateInfo(stage=VK_SHADER_STAGE_FRAGMENT_BIT, module=frag_module, pName=b"main"),
+            ]
+            vertex_input = VkPipelineVertexInputStateCreateInfo(
+                vertexBindingDescriptionCount=0,
+                pVertexBindingDescriptions=None,
+                vertexAttributeDescriptionCount=0,
+                pVertexAttributeDescriptions=None,
+            )
+            input_assembly = VkPipelineInputAssemblyStateCreateInfo(
+                topology=VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+                primitiveRestartEnable=False,
+            )
+            viewport, scissor = self._full_viewport()
+            viewport_state = VkPipelineViewportStateCreateInfo(
+                viewportCount=1,
+                pViewports=[viewport],
+                scissorCount=1,
+                pScissors=[scissor],
+            )
+            rasterizer = VkPipelineRasterizationStateCreateInfo(
+                depthClampEnable=False,
+                rasterizerDiscardEnable=False,
+                polygonMode=VK_POLYGON_MODE_FILL,
+                cullMode=VK_CULL_MODE_NONE,
+                frontFace=VK_FRONT_FACE_COUNTER_CLOCKWISE,
+                depthBiasEnable=False,
+                lineWidth=1.0,
+            )
+            multisampling = VkPipelineMultisampleStateCreateInfo(
+                rasterizationSamples=VK_SAMPLE_COUNT_1_BIT,
+                sampleShadingEnable=False,
+            )
+            blend_attachment = VkPipelineColorBlendAttachmentState(
+                blendEnable=False,
+                srcColorBlendFactor=VK_BLEND_FACTOR_ONE,
+                dstColorBlendFactor=VK_BLEND_FACTOR_ZERO,
+                colorBlendOp=VK_BLEND_OP_ADD,
+                srcAlphaBlendFactor=VK_BLEND_FACTOR_ONE,
+                dstAlphaBlendFactor=VK_BLEND_FACTOR_ZERO,
+                alphaBlendOp=VK_BLEND_OP_ADD,
+                colorWriteMask=(
+                    VK_COLOR_COMPONENT_R_BIT
+                    | VK_COLOR_COMPONENT_G_BIT
+                    | VK_COLOR_COMPONENT_B_BIT
+                    | VK_COLOR_COMPONENT_A_BIT
+                ),
+            )
+            blending = VkPipelineColorBlendStateCreateInfo(
+                logicOpEnable=False,
+                attachmentCount=1,
+                pAttachments=[blend_attachment],
+            )
+            pipeline_info = VkGraphicsPipelineCreateInfo(
+                stageCount=len(stages),
+                pStages=stages,
+                pVertexInputState=vertex_input,
+                pInputAssemblyState=input_assembly,
+                pViewportState=viewport_state,
+                pRasterizationState=rasterizer,
+                pMultisampleState=multisampling,
+                pColorBlendState=blending,
+                layout=self.renderer.post_pipeline_layout,
+                renderPass=self.renderer.post_render_pass,
+                subpass=0,
+            )
+            self.renderer.copy_pipeline = vkCreateGraphicsPipelines(
                 self.renderer.device, None, 1, [pipeline_info], None
             )[0]
         finally:

@@ -31,6 +31,8 @@ def main() -> int:
         "post.vert.spv",
         "post.frag",
         "post.frag.spv",
+        "post_copy.frag",
+        "post_copy.frag.spv",
     ]
     for shader in expected_shaders:
         path = SHADERS_DIR / shader
