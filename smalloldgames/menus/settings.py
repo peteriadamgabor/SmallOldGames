@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import glfw
-
-from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import InputState, Scene
+from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, Transition
 from smalloldgames.rendering.primitives import DrawList
 
 from .common import (
@@ -20,16 +17,16 @@ class SettingsScene:
         self,
         on_back,
         *,
-        score_repository: ScoreRepository | None = None,
+        ctx: SceneContext | None = None,
         on_sound_changed=None,
     ) -> None:
         self.on_back = on_back
-        self.score_repository = score_repository
+        self.score_repository = ctx.score_repository if ctx else None
         self.on_sound_changed = on_sound_changed
         self.sound_enabled = self._load_sound_enabled()
         self.touch_controls_enabled = self._load_touch_controls_enabled()
 
-    def update(self, _: float, inputs: InputState) -> Scene | None:
+    def update(self, _: float, inputs: InputState) -> SceneResult:
         if inputs.pointer_pressed:
             if inputs.pointer_in_rect(42, 542, 456, 120):
                 self._set_sound_enabled(not self.sound_enabled)
@@ -38,13 +35,13 @@ class SettingsScene:
                 self._set_touch_controls_enabled(not self.touch_controls_enabled)
                 return None
             if inputs.pointer_in_rect(42, 120, 456, 72):
-                return self.on_back()
+                return Transition(self.on_back())
 
-        if inputs.was_pressed(glfw.KEY_ESCAPE, glfw.KEY_BACKSPACE):
-            return self.on_back()
-        if inputs.was_pressed(glfw.KEY_S):
+        if inputs.action_pressed(GameAction.BACK):
+            return Transition(self.on_back())
+        if inputs.action_pressed(GameAction.SOUND_TOGGLE):
             self._set_sound_enabled(not self.sound_enabled)
-        if inputs.was_pressed(glfw.KEY_T):
+        if inputs.action_pressed(GameAction.TOUCH_TOGGLE):
             self._set_touch_controls_enabled(not self.touch_controls_enabled)
         return None
 
@@ -79,6 +76,12 @@ class SettingsScene:
 
     def window_title(self) -> str:
         return "Small Old Games - Settings"
+
+    def on_enter(self) -> None:
+        pass
+
+    def on_exit(self) -> None:
+        pass
 
     def _draw_setting_card(
         self,

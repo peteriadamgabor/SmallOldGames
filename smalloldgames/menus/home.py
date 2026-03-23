@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import glfw
-
-from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import GameDefinition, InputState, Scene
+from smalloldgames.engine import GameAction, GameDefinition, InputState, Scene, SceneContext, SceneResult, Transition
 from smalloldgames.rendering.primitives import DrawList
 
 from .common import (
@@ -47,12 +44,12 @@ class LauncherScene:
         on_open_leaderboard,
         on_open_settings,
         *,
-        score_repository: ScoreRepository | None = None,
+        ctx: SceneContext | None = None,
     ) -> None:
         self.games = games
         self.on_open_leaderboard = on_open_leaderboard
         self.on_open_settings = on_open_settings
-        self.score_repository = score_repository
+        self.score_repository = ctx.score_repository if ctx else None
         self.selection = 0
         self.active_game_selection = 0
         self.player_name = self._load_player_name()
@@ -60,29 +57,29 @@ class LauncherScene:
         self.touch_controls_enabled = self._load_touch_controls_enabled()
         self.stats_by_game = {game.id: self._load_stats(game.score_key) for game in self.games}
 
-    def update(self, _: float, inputs: InputState) -> Scene | None:
+    def update(self, _: float, inputs: InputState) -> SceneResult:
         if inputs.pointer_pressed:
             for index in range(self._item_count()):
                 if inputs.pointer_in_rect(*self._selection_rect(index)):
                     self._set_selection(index)
                     return self._activate_selection()
 
-        if inputs.was_pressed(glfw.KEY_LEFT, glfw.KEY_A):
+        if inputs.action_pressed(GameAction.NAV_LEFT):
             self._move_selection(-1.0, 0.0)
-        if inputs.was_pressed(glfw.KEY_RIGHT, glfw.KEY_D):
+        if inputs.action_pressed(GameAction.NAV_RIGHT):
             self._move_selection(1.0, 0.0)
-        if inputs.was_pressed(glfw.KEY_UP, glfw.KEY_W):
+        if inputs.action_pressed(GameAction.NAV_UP):
             self._move_selection(0.0, 1.0)
-        if inputs.was_pressed(glfw.KEY_DOWN, glfw.KEY_S):
+        if inputs.action_pressed(GameAction.NAV_DOWN):
             self._move_selection(0.0, -1.0)
 
-        if inputs.was_pressed(glfw.KEY_TAB, glfw.KEY_L):
+        if inputs.action_pressed(GameAction.LEADERBOARD):
             self._set_selection(len(self.games))
-            return self.on_open_leaderboard(self._active_game())
-        if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE):
+            return Transition(self.on_open_leaderboard(self._active_game()))
+        if inputs.action_pressed(GameAction.CONFIRM):
             return self._activate_selection()
-        if inputs.was_pressed(glfw.KEY_P):
-            return self._active_game().make_scene()
+        if inputs.action_pressed(GameAction.SETTINGS):
+            return Transition(self._active_game().make_scene())
         return None
 
     def render(self, draw: DrawList) -> None:
@@ -157,6 +154,12 @@ class LauncherScene:
     @staticmethod
     def window_title() -> str:
         return "Small Old Games - Launcher"
+
+    def on_enter(self) -> None:
+        pass
+
+    def on_exit(self) -> None:
+        pass
 
     def _draw_feature_panel(self, draw: DrawList) -> None:
         x, y, width, height = HERO_RECT
@@ -256,6 +259,11 @@ class LauncherScene:
             draw.sprite(center_x - 20, art_y - 24, INVADER_B_SPRITE, width=24, height=16, world=False)
             draw.sprite(center_x - 12, art_y - 52, CANNON_SPRITE, width=26, height=18, world=False)
             return
+        if variant == "benchmark":
+            draw.sprite(center_x - 38, art_y - 10, CLOUD_SPRITE, width=66, height=28, world=False)
+            draw.sprite(center_x - 34, art_y - 42, PLATFORM_MOVING_SPRITE, width=70, height=18, world=False)
+            draw.sprite(center_x - 10, art_y - 26, BLACK_HOLE_SPRITE, width=28, height=28, world=False)
+            return
         draw.sprite(center_x - 20, art_y - 18, HOPPER_SPRITE, width=40, height=40, world=False)
 
     def _draw_feature_art(self, draw: DrawList, *, x: float, y: float, variant: str) -> None:
@@ -278,6 +286,12 @@ class LauncherScene:
             draw.sprite(x + 278, y + 138, INVADER_B_SPRITE, width=36, height=24, world=False)
             draw.sprite(x + 324, y + 138, INVADER_B_SPRITE, width=36, height=24, world=False)
             draw.sprite(x + 300, y + 78, CANNON_SPRITE, width=44, height=28, world=False)
+            return
+        if variant == "benchmark":
+            draw.sprite(x + 258, y + 176, CLOUD_SPRITE, width=114, height=48, world=False)
+            draw.sprite(x + 266, y + 96, PLATFORM_MOVING_SPRITE, width=132, height=30, world=False)
+            draw.sprite(x + 314, y + 124, BLACK_HOLE_SPRITE, width=54, height=54, world=False)
+            draw.sprite(x + 288, y + 76, MONSTER_SPRITE, width=62, height=34, world=False)
             return
         if variant == "board":
             draw.sprite(x + 274, y + 174, CLOUD_SPRITE, width=104, height=46, world=False)
@@ -337,12 +351,12 @@ class LauncherScene:
             "settings",
         )
 
-    def _activate_selection(self) -> Scene | None:
+    def _activate_selection(self) -> SceneResult:
         if self.selection < len(self.games):
-            return self._active_game().make_scene()
+            return Transition(self._active_game().make_scene())
         if self.selection == len(self.games):
-            return self.on_open_leaderboard(self._active_game())
-        return self.on_open_settings()
+            return Transition(self.on_open_leaderboard(self._active_game()))
+        return Transition(self.on_open_settings())
 
     def _move_selection(self, dx: float, dy: float) -> None:
         current_x, current_y = self._rect_center(self._selection_rect(self.selection))

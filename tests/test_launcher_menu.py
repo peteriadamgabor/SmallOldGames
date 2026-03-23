@@ -4,7 +4,7 @@ import unittest
 
 import glfw
 
-from smalloldgames.engine import GameDefinition
+from smalloldgames.engine import GameDefinition, Transition
 from smalloldgames.engine.input import InputState
 from smalloldgames.menus.home import LauncherScene
 
@@ -43,7 +43,7 @@ class LauncherMenuTests(unittest.TestCase):
         result = scene.update(0.0, inputs)
 
         self.assertEqual(scene.selection, 3)
-        self.assertEqual(result, ("leaderboard", "space_invaders"))
+        self.assertEqual(result, Transition(("leaderboard", "space_invaders")))
 
     @staticmethod
     def _open_leaderboard(game):

@@ -21,6 +21,7 @@ To get started with development, you'll need:
 1.  Clone the repository.
 2.  Run `uv sync` to install dependencies.
 3.  Run `uv run smalloldgames` to verify the installation.
+4.  Optionally run `uv run python -m smalloldgames.benchmark --benchmark-output /tmp/benchmark.json` to verify the benchmark path.
 
 ## How Can I Contribute?
 
@@ -51,6 +52,7 @@ We're always looking for new retro mobile game ideas! Please open an issue to di
 - We use the standard `unittest` framework.
 - Place tests in the `tests/` directory.
 - Run tests before submitting: `uv run python -m unittest discover -s tests -v`
+- For benchmark changes, verify the headless benchmark CLI still writes a JSON result file and prints a summary to stdout.
 
 ### Commit Messages
 - Use clear and concise commit messages.
@@ -75,6 +77,7 @@ Small Old Games uses a custom Vulkan-backed 2D renderer and an Entity Component 
 - `smalloldgames/games/`: Specific game logic (e.g., Sketch Hopper).
 - `smalloldgames/menus/`: Launcher and UI scenes.
 - `assets/`: Shaders, sprites, and configuration.
+- `smalloldgames/benchmark.py`: Headless and interactive benchmark entrypoints.
 
 ### Shaders
 If you modify shaders in `assets/shaders/`, you must recompile them using `glslangValidator`:
@@ -84,4 +87,4 @@ glslangValidator -V assets/shaders/color.frag -o assets/shaders/color.frag.spv
 ```
 
 ### Persistence
-The project stores local runtime data (scores, config overrides) in `~/.smalloldgames/`. Do not commit these files to the repository.
+The project stores local runtime data (scores, config overrides, benchmark reports) in `~/.smalloldgames/`. Do not commit these files to the repository.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from smalloldgames.engine import SceneContext
 from smalloldgames.engine.input import InputState
 from smalloldgames.games.space_invaders import SpaceInvadersScene
 
@@ -105,7 +106,7 @@ class SpaceInvadersTests(unittest.TestCase):
         db_path = os.path.join(tempfile.mkdtemp(), "test.sqlite3")
         repo = ScoreRepository(database_path=db_path)
         try:
-            scene = SpaceInvadersScene(lambda: None, score_repository=repo, seed=42)
+            scene = SpaceInvadersScene(lambda: None, ctx=SceneContext(score_repository=repo), seed=42)
             scene.score = 500
             scene.lives = 1
             scene._player_killed()

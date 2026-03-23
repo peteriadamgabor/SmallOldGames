@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import glfw
 
-from smalloldgames.data.storage import ScoreEntry, ScoreRepository, ScoreStats
-from smalloldgames.engine import GameDefinition, InputState, Scene
+from smalloldgames.data.storage import ScoreEntry, ScoreStats
+from smalloldgames.engine import GameAction, GameDefinition, InputState, Scene, SceneContext, SceneResult, Transition
 from smalloldgames.rendering.primitives import DrawList
 
 from .common import (
@@ -27,12 +27,12 @@ class LeaderboardScene:
         games: tuple[GameDefinition, ...],
         current_game: GameDefinition,
         *,
-        score_repository: ScoreRepository | None = None,
+        ctx: SceneContext | None = None,
     ) -> None:
         self.on_back = on_back
         self.games = games
         self.game = current_game
-        self.score_repository = score_repository
+        self.score_repository = ctx.score_repository if ctx else None
         self.editing_name = False
         self.player_name = self._load_player_name()
         self.draft_name = self.player_name
@@ -42,16 +42,16 @@ class LeaderboardScene:
         self.top_scores = self._load_top_scores()
         self.stats = self._load_stats()
 
-    def update(self, _: float, inputs: InputState) -> Scene | None:
+    def update(self, _: float, inputs: InputState) -> SceneResult:
         if inputs.pointer_pressed:
             if inputs.pointer_in_rect(42, 642, 456, 150):
                 self.editing_name = True
                 self.draft_name = self.player_name
                 return None
             if inputs.pointer_in_rect(42, 120, 210, 72):
-                return self.on_back()
+                return Transition(self.on_back())
             if inputs.pointer_in_rect(288, 120, 210, 72):
-                return self.game.make_scene()
+                return Transition(self.game.make_scene())
             if inputs.pointer_in_rect(42, 860, 60, 60):
                 self._cycle_game(-1)
                 return None
@@ -60,15 +60,15 @@ class LeaderboardScene:
                 return None
         if self.editing_name:
             return self._update_name_editor(inputs)
-        if inputs.was_pressed(glfw.KEY_LEFT, glfw.KEY_A):
+        if inputs.action_pressed(GameAction.NAV_LEFT):
             self._cycle_game(-1)
-        if inputs.was_pressed(glfw.KEY_RIGHT, glfw.KEY_D):
+        if inputs.action_pressed(GameAction.NAV_RIGHT):
             self._cycle_game(1)
-        if inputs.was_pressed(glfw.KEY_ESCAPE, glfw.KEY_BACKSPACE):
-            return self.on_back()
-        if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE):
-            return self.game.make_scene()
-        if inputs.was_pressed(glfw.KEY_E):
+        if inputs.action_pressed(GameAction.BACK):
+            return Transition(self.on_back())
+        if inputs.action_pressed(GameAction.CONFIRM):
+            return Transition(self.game.make_scene())
+        if inputs.action_pressed(GameAction.EDIT_NAME):
             self.editing_name = True
             self.draft_name = self.player_name
         return None
@@ -126,6 +126,12 @@ class LeaderboardScene:
     def window_title(self) -> str:
         return f"Small Old Games - {self.game.title} Leaderboard"
 
+    def on_enter(self) -> None:
+        pass
+
+    def on_exit(self) -> None:
+        pass
+
     def _update_name_editor(self, inputs: InputState) -> Scene | None:
         if inputs.was_pressed(glfw.KEY_ESCAPE):
             self.editing_name = False
@@ -136,7 +142,7 @@ class LeaderboardScene:
             self.draft_name = self.player_name
             self.editing_name = False
             return None
-        if inputs.was_pressed(glfw.KEY_BACKSPACE):
+        if inputs.was_pressed(glfw.KEY_BACKSPACE):  # raw key: text editing
             self.draft_name = self.draft_name[:-1].rstrip()
         for character in _pressed_characters(inputs):
             if len(self.draft_name.replace(" ", "")) >= 10 and character != " ":

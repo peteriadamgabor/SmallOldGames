@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from typing import TypeVar
+from itertools import islice
+from typing import Protocol, TypeVar
 
 EntityId = int
 T = TypeVar("T")
@@ -71,6 +72,17 @@ class World:
         )
 
 
+class System(Protocol):
+    """A world-oriented update unit that can be composed into a runtime pipeline."""
+
+    def update(self, world: World, dt: float) -> None: ...
+
+
+def run_systems(world: World, systems: Iterable[System], dt: float) -> None:
+    for system in systems:
+        system.update(world, dt)
+
+
 class ComponentListProxy[T]:
     """List-like adapter exposing one component type from a world."""
 
@@ -85,7 +97,12 @@ class ComponentListProxy[T]:
         return len(self.world.components(self.component_type))
 
     def __getitem__(self, index: int) -> T:
-        return list(self)[index]
+        values = self.world.components(self.component_type).values()
+        if index < 0:
+            index += len(values)
+        if not (0 <= index < len(values)):
+            raise IndexError(index)
+        return next(islice(values, index, None))  # type: ignore[return-value]
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, ComponentListProxy):

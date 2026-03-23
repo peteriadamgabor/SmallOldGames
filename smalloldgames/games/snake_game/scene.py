@@ -3,11 +3,7 @@ from __future__ import annotations
 import random
 from collections.abc import Callable
 
-import glfw
-
-from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import InputState, Scene
-from smalloldgames.engine.audio import AudioEngine
+from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, Transition
 from smalloldgames.menus.common import (
     ACCENT,
     BG_BOTTOM,
@@ -32,13 +28,12 @@ class SnakeScene:
         self,
         on_exit: Callable[[], Scene],
         *,
-        score_repository: ScoreRepository | None = None,
-        audio: AudioEngine | None = None,
+        ctx: SceneContext | None = None,
         seed: int | None = None,
     ) -> None:
         self.on_exit = on_exit
-        self.score_repository = score_repository
-        self.audio = audio
+        self.score_repository = ctx.score_repository if ctx else None
+        self.audio = ctx.audio if ctx else None
         self.random = random.Random(seed)
         self.player_name = self._load_player_name()
         self.best_score = self._load_best_score()
@@ -58,25 +53,25 @@ class SnakeScene:
         self.move_speed = 0.15
         self.score_saved = False
 
-    def update(self, dt: float, inputs: InputState) -> Scene | None:
-        if inputs.was_pressed(glfw.KEY_ESCAPE):
-            return self.on_exit()
-        if inputs.was_pressed(glfw.KEY_P):
+    def update(self, dt: float, inputs: InputState) -> SceneResult:
+        if inputs.action_pressed(GameAction.BACK):
+            return Transition(self.on_exit())
+        if inputs.action_pressed(GameAction.PAUSE):
             self.paused = not self.paused
             return None
-        if inputs.was_pressed(glfw.KEY_R):
+        if inputs.action_pressed(GameAction.RESTART):
             self.reset()
             return None
 
         if self.game_over:
-            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE) or (
+            if inputs.action_pressed(GameAction.CONFIRM) or (
                 inputs.pointer_pressed and inputs.pointer_in_rect(100, 300, 340, 100)
             ):
                 self.reset()
             return None
 
         if self.paused:
-            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE) or (
+            if inputs.action_pressed(GameAction.CONFIRM) or (
                 inputs.pointer_pressed and inputs.pointer_in_rect(100, 300, 340, 100)
             ):
                 self.paused = False
@@ -169,13 +164,13 @@ class SnakeScene:
             self.snake.pop()
 
     def _handle_input(self, inputs: InputState) -> None:
-        if inputs.was_pressed(glfw.KEY_UP, glfw.KEY_W) and self.direction != (0, -1):
+        if inputs.action_pressed(GameAction.NAV_UP) and self.direction != (0, -1):
             self.next_direction = (0, 1)
-        elif inputs.was_pressed(glfw.KEY_DOWN, glfw.KEY_S) and self.direction != (0, 1):
+        elif inputs.action_pressed(GameAction.NAV_DOWN) and self.direction != (0, 1):
             self.next_direction = (0, -1)
-        elif inputs.was_pressed(glfw.KEY_LEFT, glfw.KEY_A) and self.direction != (1, 0):
+        elif inputs.action_pressed(GameAction.NAV_LEFT) and self.direction != (1, 0):
             self.next_direction = (-1, 0)
-        elif inputs.was_pressed(glfw.KEY_RIGHT, glfw.KEY_D) and self.direction != (-1, 0):
+        elif inputs.action_pressed(GameAction.NAV_RIGHT) and self.direction != (-1, 0):
             self.next_direction = (1, 0)
 
         if self.touch_controls_enabled and inputs.pointer_pressed:
@@ -248,3 +243,9 @@ class SnakeScene:
 
     def window_title(self) -> str:
         return f"Small Old Games - Snake - Score {self.score}"
+
+    def on_enter(self) -> None:
+        pass
+
+    def on_exit(self) -> None:
+        pass

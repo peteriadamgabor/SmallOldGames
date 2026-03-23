@@ -3,11 +3,7 @@ from __future__ import annotations
 import random
 from collections.abc import Callable
 
-import glfw
-
-from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import ComponentListProxy, InputState, Scene, World
-from smalloldgames.engine.audio import AudioEngine
+from smalloldgames.engine import ComponentListProxy, GameAction, InputState, Scene, SceneContext, SceneResult, Transition, World
 from smalloldgames.rendering.primitives import DrawList
 
 from .config import SketchHopperConfig, load_sketch_hopper_config
@@ -65,14 +61,13 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         on_exit: Callable[[], Scene],
         *,
         config: SketchHopperConfig | None = None,
-        score_repository: ScoreRepository | None = None,
-        audio: AudioEngine | None = None,
+        ctx: SceneContext | None = None,
         seed: int | None = None,
     ) -> None:
         self.on_exit = on_exit
         self.config = config or load_sketch_hopper_config()
-        self.score_repository = score_repository
-        self.audio = audio
+        self.score_repository = ctx.score_repository if ctx else None
+        self.audio = ctx.audio if ctx else None
         self.random = random.Random(seed)
         self._apply_config()
         self.best_score = self._load_best_score()
@@ -208,7 +203,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         self._build_initial_clouds()
         self._build_initial_platforms()
 
-    def update(self, dt: float, inputs: InputState) -> Scene | None:
+    def update(self, dt: float, inputs: InputState) -> SceneResult:
         self.animation_time += dt
         self._tick_feedback(dt)
         if self._pause_tapped(inputs):
@@ -216,14 +211,14 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
             if self.paused:
                 self.pause_page = "settings"
             return None
-        if inputs.was_pressed(glfw.KEY_P) and not self.game_over:
+        if inputs.action_pressed(GameAction.PAUSE) and not self.game_over:
             self.paused = not self.paused
             if self.paused:
                 self.pause_page = "settings"
             return None
-        if inputs.was_pressed(glfw.KEY_ESCAPE):
-            return self.on_exit()
-        if inputs.was_pressed(glfw.KEY_R):
+        if inputs.action_pressed(GameAction.BACK):
+            return Transition(self.on_exit())
+        if inputs.action_pressed(GameAction.RESTART):
             self.reset()
             return None
         if self.game_over:
@@ -234,7 +229,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         was_game_over = self.game_over
         move_axis = self._control_move_axis(inputs)
         self.shot_cooldown = max(0.0, self.shot_cooldown - dt)
-        if (inputs.was_pressed(glfw.KEY_SPACE) or self._shoot_tapped(inputs)) and self.shot_cooldown <= 0.0:
+        if (inputs.action_pressed(GameAction.FIRE) or self._shoot_tapped(inputs)) and self.shot_cooldown <= 0.0:
             self._shoot()
         self._tick_platforms(dt)
         self._tick_monsters(dt)
@@ -306,3 +301,9 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
 
     def window_title(self) -> str:
         return f"Small Old Games - Sketch Hopper - Score {self.score}"
+
+    def on_enter(self) -> None:
+        pass
+
+    def on_exit(self) -> None:
+        pass

@@ -4,11 +4,7 @@ import random
 from collections.abc import Callable
 from dataclasses import dataclass
 
-import glfw
-
-from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.engine import InputState, Scene
-from smalloldgames.engine.audio import AudioEngine
+from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, Transition
 from smalloldgames.menus.common import (
     ACCENT,
     BG_BOTTOM,
@@ -170,13 +166,12 @@ class SpaceInvadersScene:
         self,
         on_exit: Callable[[], Scene],
         *,
-        score_repository: ScoreRepository | None = None,
-        audio: AudioEngine | None = None,
+        ctx: SceneContext | None = None,
         seed: int | None = None,
     ) -> None:
         self.on_exit = on_exit
-        self.score_repository = score_repository
-        self.audio = audio
+        self.score_repository = ctx.score_repository if ctx else None
+        self.audio = ctx.audio if ctx else None
         self.rng = random.Random(seed)
         self.player_name = self._load_player_name()
         self.best_score = self._load_best_score()
@@ -243,19 +238,19 @@ class SpaceInvadersScene:
     # -----------------------------------------------------------------------
     # Scene protocol
     # -----------------------------------------------------------------------
-    def update(self, dt: float, inputs: InputState) -> Scene | None:
-        if inputs.was_pressed(glfw.KEY_ESCAPE):
-            return self.on_exit()
+    def update(self, dt: float, inputs: InputState) -> SceneResult:
+        if inputs.action_pressed(GameAction.BACK):
+            return Transition(self.on_exit())
 
-        if inputs.was_pressed(glfw.KEY_P):
+        if inputs.action_pressed(GameAction.PAUSE):
             if not self.game_over:
                 self.paused = not self.paused
             return None
 
         if self.game_over:
             if (
-                inputs.was_pressed(glfw.KEY_R)
-                or inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE)
+                inputs.action_pressed(GameAction.RESTART)
+                or inputs.action_pressed(GameAction.CONFIRM)
                 or (
                     self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80)
                 )
@@ -264,7 +259,7 @@ class SpaceInvadersScene:
             return None
 
         if self.paused:
-            if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_SPACE) or (
+            if inputs.action_pressed(GameAction.CONFIRM) or (
                 self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80)
             ):
                 self.paused = False
@@ -301,6 +296,12 @@ class SpaceInvadersScene:
     def window_title(self) -> str:
         return f"Small Old Games - Space Invaders - Score {self.score}"
 
+    def on_enter(self) -> None:
+        pass
+
+    def on_exit(self) -> None:
+        pass
+
     # -----------------------------------------------------------------------
     # Player
     # -----------------------------------------------------------------------
@@ -309,15 +310,12 @@ class SpaceInvadersScene:
             self.player_hit_timer -= dt
             return
 
-        move = inputs.axis(
-            (glfw.KEY_LEFT, glfw.KEY_A),
-            (glfw.KEY_RIGHT, glfw.KEY_D),
-        )
+        move = inputs.action_axis(GameAction.MOVE_LEFT, GameAction.MOVE_RIGHT)
 
         if self.touch_controls_enabled and move == 0.0:
-            if inputs.is_down(glfw.KEY_LEFT) or inputs.is_down(glfw.KEY_A):
+            if inputs.action_held(GameAction.MOVE_LEFT):
                 move = -1.0
-            elif inputs.is_down(glfw.KEY_RIGHT) or inputs.is_down(glfw.KEY_D):
+            elif inputs.action_held(GameAction.MOVE_RIGHT):
                 move = 1.0
             if inputs.pointer_down:
                 if inputs.pointer_in_rect(0, 0, 120, 180):
@@ -328,7 +326,7 @@ class SpaceInvadersScene:
         self.player_x += move * PLAYER_SPEED * dt
         self.player_x = max(PLAY_LEFT + PLAYER_W * 0.5, min(PLAY_RIGHT - PLAYER_W * 0.5, self.player_x))
 
-        should_fire = inputs.was_pressed(glfw.KEY_SPACE, glfw.KEY_UP, glfw.KEY_W)
+        should_fire = inputs.action_pressed(GameAction.FIRE)
         if (
             self.touch_controls_enabled
             and not should_fire

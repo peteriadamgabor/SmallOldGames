@@ -9,6 +9,11 @@ from smalloldgames.assets.sprites import PackedSprite
 
 Color = tuple[float, float, float, float]
 
+FLOATS_PER_VERTEX = 8
+FONT_GLYPH_WIDTH = 5
+FONT_GLYPH_HEIGHT = 7
+FONT_CHAR_STEP = 6  # glyph width + 1px spacing
+
 
 @lru_cache(maxsize=256)
 def _cached_normalize(value: str) -> str:
@@ -30,6 +35,51 @@ class DrawList:
     def __post_init__(self) -> None:
         self._inv_w = 2.0 / self.width
         self._inv_h = 2.0 / self.height
+
+    def _emit_quad(
+        self,
+        x0: float,
+        y0: float,
+        x1: float,
+        y1: float,
+        r0: float,
+        g0: float,
+        b0: float,
+        a0: float,
+        r1: float,
+        g1: float,
+        b1: float,
+        a1: float,
+        r2: float,
+        g2: float,
+        b2: float,
+        a2: float,
+        r3: float,
+        g3: float,
+        b3: float,
+        a3: float,
+        u0: float,
+        v0: float,
+        u1: float,
+        v1: float,
+    ) -> None:
+        """Emit 6 vertices (two triangles) for a quad.
+
+        Corners: (x0,y0)=bottom-left, (x1,y0)=bottom-right,
+                 (x1,y1)=top-right, (x0,y1)=top-left.
+        Colors: 0=BL, 1=BR, 2=TR, 3=TL.
+        UVs: (u0,v0)=BL, (u1,v1)=TR.
+        """
+        self.vertices.extend(
+            (
+                x0, y0, r0, g0, b0, a0, u0, v0,
+                x1, y0, r1, g1, b1, a1, u1, v0,
+                x1, y1, r2, g2, b2, a2, u1, v1,
+                x0, y0, r0, g0, b0, a0, u0, v0,
+                x1, y1, r2, g2, b2, a2, u1, v1,
+                x0, y1, r3, g3, b3, a3, u0, v1,
+            )
+        )
 
     def set_camera(self, camera_y: float) -> None:
         self.camera_y = camera_y
@@ -63,57 +113,13 @@ class DrawList:
         br_r, br_g, br_b, br_a = bottom_right
         tr_r, tr_g, tr_b, tr_a = top_right
         tl_r, tl_g, tl_b, tl_a = top_left
-        self.vertices.extend(
-            (
-                x0,
-                y0,
-                bl_r,
-                bl_g,
-                bl_b,
-                bl_a,
-                u,
-                v,
-                x1,
-                y0,
-                br_r,
-                br_g,
-                br_b,
-                br_a,
-                u,
-                v,
-                x1,
-                y1,
-                tr_r,
-                tr_g,
-                tr_b,
-                tr_a,
-                u,
-                v,
-                x0,
-                y0,
-                bl_r,
-                bl_g,
-                bl_b,
-                bl_a,
-                u,
-                v,
-                x1,
-                y1,
-                tr_r,
-                tr_g,
-                tr_b,
-                tr_a,
-                u,
-                v,
-                x0,
-                y1,
-                tl_r,
-                tl_g,
-                tl_b,
-                tl_a,
-                u,
-                v,
-            )
+        self._emit_quad(
+            x0, y0, x1, y1,
+            bl_r, bl_g, bl_b, bl_a,
+            br_r, br_g, br_b, br_a,
+            tr_r, tr_g, tr_b, tr_a,
+            tl_r, tl_g, tl_b, tl_a,
+            u, v, u, v,
         )
 
     def quad(
@@ -135,58 +141,7 @@ class DrawList:
         y1 = (y + height - cam) * inv_h - 1.0
         r, g, b, a = color
         u, v = self.white_uv
-        self.vertices.extend(
-            (
-                x0,
-                y0,
-                r,
-                g,
-                b,
-                a,
-                u,
-                v,
-                x1,
-                y0,
-                r,
-                g,
-                b,
-                a,
-                u,
-                v,
-                x1,
-                y1,
-                r,
-                g,
-                b,
-                a,
-                u,
-                v,
-                x0,
-                y0,
-                r,
-                g,
-                b,
-                a,
-                u,
-                v,
-                x1,
-                y1,
-                r,
-                g,
-                b,
-                a,
-                u,
-                v,
-                x0,
-                y1,
-                r,
-                g,
-                b,
-                a,
-                u,
-                v,
-            )
-        )
+        self._emit_quad(x0, y0, x1, y1, r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a, u, v, u, v)
 
     def triangle(
         self,
@@ -251,9 +206,9 @@ class DrawList:
         r, g, b, a = color
         font_glyphs = self.font_glyphs
         vertices = self.vertices
-        char_step = 6 * scale
-        glyph_w = 5 * scale
-        glyph_h = 7 * scale
+        char_step = FONT_CHAR_STEP * scale
+        glyph_w = FONT_GLYPH_WIDTH * scale
+        glyph_h = FONT_GLYPH_HEIGHT * scale
         cursor_x = x
         for character in text:
             if character == " ":
@@ -265,59 +220,12 @@ class DrawList:
                 y0 = (y - cam) * inv_h - 1.0
                 x1 = (cursor_x + glyph_w) * inv_w - 1.0
                 y1 = (y + glyph_h - cam) * inv_h - 1.0
-                u0, u1 = sprite.u0, sprite.u1
-                v0, v1 = sprite.v1, sprite.v0
-                vertices.extend(
-                    (
-                        x0,
-                        y0,
-                        r,
-                        g,
-                        b,
-                        a,
-                        u0,
-                        v0,
-                        x1,
-                        y0,
-                        r,
-                        g,
-                        b,
-                        a,
-                        u1,
-                        v0,
-                        x1,
-                        y1,
-                        r,
-                        g,
-                        b,
-                        a,
-                        u1,
-                        v1,
-                        x0,
-                        y0,
-                        r,
-                        g,
-                        b,
-                        a,
-                        u0,
-                        v0,
-                        x1,
-                        y1,
-                        r,
-                        g,
-                        b,
-                        a,
-                        u1,
-                        v1,
-                        x0,
-                        y1,
-                        r,
-                        g,
-                        b,
-                        a,
-                        u0,
-                        v1,
-                    )
+                su0, su1 = sprite.u0, sprite.u1
+                sv0, sv1 = sprite.v1, sprite.v0
+                self._emit_quad(
+                    x0, y0, x1, y1,
+                    r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a,
+                    su0, sv0, su1, sv1,
                 )
             else:
                 self._draw_bitmap_glyph(cursor_x, y, FONT_5X7[character], scale=scale, color=color, world=world)
@@ -343,62 +251,19 @@ class DrawList:
         y1 = (y + height - cam) * inv_h - 1.0
         u0, u1 = (sprite.u1, sprite.u0) if flip_x else (sprite.u0, sprite.u1)
         v0, v1 = sprite.v1, sprite.v0
-        self.vertices.extend(
-            (
-                x0,
-                y0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                u0,
-                v0,
-                x1,
-                y0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                u1,
-                v0,
-                x1,
-                y1,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                u1,
-                v1,
-                x0,
-                y0,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                u0,
-                v0,
-                x1,
-                y1,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                u1,
-                v1,
-                x0,
-                y1,
-                1.0,
-                1.0,
-                1.0,
-                1.0,
-                u0,
-                v1,
-            )
+        self._emit_quad(
+            x0, y0, x1, y1,
+            1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0,
+            u0, v0, u1, v1,
         )
 
     @staticmethod
+    @lru_cache(maxsize=256)
     def measure_text(value: str, *, scale: float) -> float:
-        return max(len(_cached_normalize(value)) * 6 * scale - scale, 0.0)
+        return max(len(_cached_normalize(value)) * FONT_CHAR_STEP * scale - scale, 0.0)
 
     def _draw_bitmap_glyph(
         self,
@@ -415,7 +280,7 @@ class DrawList:
                 if bit == "1":
                     self.quad(
                         x + col_index * scale,
-                        y + (6 - row_index) * scale,
+                        y + (FONT_GLYPH_HEIGHT - 1 - row_index) * scale,
                         scale,
                         scale,
                         color,
