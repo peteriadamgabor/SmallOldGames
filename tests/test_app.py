@@ -5,16 +5,20 @@ from array import array
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+import glfw
+
 from smalloldgames.engine.app import (
     WINDOW_HEIGHT,
     WINDOW_WIDTH,
     App,
+    PlatformBootstrap,
     RuntimeLoop,
     _content_rect,
     _parse_args,
     _resolve_database_path,
 )
 from smalloldgames.engine.debug_overlay import FrameProfile
+from smalloldgames.engine.input import GameAction, InputState
 from smalloldgames.engine.scene import Pop, Push, Transition
 
 
@@ -98,6 +102,12 @@ class AppLayoutTests(unittest.TestCase):
         self.assertIsNotNone(database_path)
         self.assertIn("smalloldgames-benchmark-scoreboard.sqlite3", database_path)
 
+    def test_post_process_toggle_action_is_bound(self) -> None:
+        inputs = InputState()
+        inputs.on_key(glfw.KEY_F4, glfw.PRESS)
+
+        self.assertTrue(inputs.action_pressed(GameAction.POST_PROCESS_TOGGLE))
+
 
 class AppSceneResultTests(unittest.TestCase):
     def test_transition_replaces_scene_and_updates_music(self) -> None:
@@ -158,7 +168,7 @@ class RuntimeLoopTests(unittest.TestCase):
         app.window = object()
         app.inputs = SimpleNamespace(end_frame=Mock())
         app.draw_list = _FakeDrawList()
-        app.renderer = SimpleNamespace(render=Mock())
+        app.renderer = SimpleNamespace(render=Mock(), post_process_enabled=True)
         app.audio = SimpleNamespace(play_music=Mock())
         app._fps = 0.0
         app._show_debug = False
@@ -271,6 +281,23 @@ class RuntimeLoopTests(unittest.TestCase):
             loop.run()
 
         set_window_should_close.assert_called_once_with(app.window, True)
+
+    def test_on_key_can_toggle_post_process(self) -> None:
+        app = SimpleNamespace()
+        app.inputs = InputState()
+        app.window = object()
+        app.renderer = SimpleNamespace(post_process_enabled=True)
+        app._show_debug = False
+        bootstrap = PlatformBootstrap(app)
+
+        bootstrap.on_key(app.window, 0, 0, 1, 0)  # unrelated press
+        self.assertTrue(app.renderer.post_process_enabled)
+
+        bootstrap.on_key(app.window, glfw.KEY_F4, 0, glfw.PRESS, 0)
+        self.assertFalse(app.renderer.post_process_enabled)
+
+        bootstrap.on_key(app.window, glfw.KEY_F4, 0, glfw.PRESS, 0)
+        self.assertTrue(app.renderer.post_process_enabled)
 
 
 if __name__ == "__main__":

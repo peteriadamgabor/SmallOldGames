@@ -70,6 +70,7 @@ class VulkanRenderer:
         self.post_pipeline_layout = None
         self.scene_pipeline = None
         self.post_pipeline = None
+        self.copy_pipeline = None
         self.command_pool = None
         self.command_buffers: list = []
         self.vertex_buffer = None
@@ -80,6 +81,7 @@ class VulkanRenderer:
         self.gpu_timestamp_period_ns = 0.0
         self.gpu_timing_pending = False
         self.last_gpu_frame_ms = 0.0
+        self.post_process_enabled = True
         self.texture_image = None
         self.texture_memory = None
         self.texture_view = None

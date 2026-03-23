@@ -27,6 +27,7 @@ class VulkanRendererTests(unittest.TestCase):
         renderer.gpu_timestamp_period_ns = 1_000_000.0
         renderer.gpu_timing_pending = False
         renderer.last_gpu_frame_ms = 0.0
+        renderer.post_process_enabled = True
         renderer.in_flight_fence = object()
         renderer.image_available = object()
         renderer.render_finished = object()
