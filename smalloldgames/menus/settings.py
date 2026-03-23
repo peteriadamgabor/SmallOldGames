@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, Transition
+from smalloldgames.engine import GameAction, InputState, SceneContext, SceneResult, Transition
 from smalloldgames.rendering.primitives import DrawList
 
 from .common import (

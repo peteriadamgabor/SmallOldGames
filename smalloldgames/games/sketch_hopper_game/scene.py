@@ -3,7 +3,16 @@ from __future__ import annotations
 import random
 from collections.abc import Callable
 
-from smalloldgames.engine import ComponentListProxy, GameAction, InputState, Scene, SceneContext, SceneResult, Transition, World
+from smalloldgames.engine import (
+    ComponentListProxy,
+    GameAction,
+    InputState,
+    Scene,
+    SceneContext,
+    SceneResult,
+    Transition,
+    World,
+)
 from smalloldgames.rendering.primitives import DrawList
 
 from .config import SketchHopperConfig, load_sketch_hopper_config
@@ -64,7 +73,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         ctx: SceneContext | None = None,
         seed: int | None = None,
     ) -> None:
-        self.on_exit = on_exit
+        self.exit_scene_factory = on_exit
         self.config = config or load_sketch_hopper_config()
         self.score_repository = ctx.score_repository if ctx else None
         self.audio = ctx.audio if ctx else None
@@ -217,7 +226,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
                 self.pause_page = "settings"
             return None
         if inputs.action_pressed(GameAction.BACK):
-            return Transition(self.on_exit())
+            return Transition(self.exit_scene_factory())
         if inputs.action_pressed(GameAction.RESTART):
             self.reset()
             return None

@@ -24,10 +24,10 @@ from vulkan import (
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-    VK_QUERY_TYPE_TIMESTAMP,
     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
     VK_PIPELINE_STAGE_TRANSFER_BIT,
+    VK_QUERY_TYPE_TIMESTAMP,
     VK_QUEUE_FAMILY_IGNORED,
     VK_SAMPLE_COUNT_1_BIT,
     VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -190,7 +190,9 @@ class VulkanResources:
             vkDestroyBuffer(self.renderer.device, staging_buffer, None)
             vkFreeMemory(self.renderer.device, staging_memory, None)
 
-        self.renderer.texture_view = create_image_view(self.renderer, self.renderer.texture_image, VK_FORMAT_R8G8B8A8_UNORM)
+        self.renderer.texture_view = create_image_view(
+            self.renderer, self.renderer.texture_image, VK_FORMAT_R8G8B8A8_UNORM
+        )
         self.renderer.texture_sampler = vkCreateSampler(
             self.renderer.device,
             VkSamplerCreateInfo(

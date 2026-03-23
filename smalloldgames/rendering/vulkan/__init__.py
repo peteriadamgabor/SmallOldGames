@@ -1,2 +1,1 @@
 """Internal Vulkan backend helpers."""
-

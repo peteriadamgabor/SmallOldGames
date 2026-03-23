@@ -5,10 +5,10 @@ from pathlib import Path
 
 import glfw
 from vulkan import (
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
     VK_QUERY_RESULT_64_BIT,
     VK_QUERY_RESULT_WAIT_BIT,
     VK_SUCCESS,
-    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
     VK_TRUE,
     VkPresentInfoKHR,
     VkSubmitInfo,

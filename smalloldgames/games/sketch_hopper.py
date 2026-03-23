@@ -30,8 +30,8 @@ __all__ = [
     "Platform",
     "Player",
     "Projectile",
-    "register_game",
     "SketchHopperScene",
+    "register_game",
 ]
 
 

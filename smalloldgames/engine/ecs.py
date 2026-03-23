@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from itertools import islice
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, cast
 
 EntityId = int
 T = TypeVar("T")
@@ -36,7 +36,7 @@ class World:
 
     def components(self, component_type: type[T]) -> dict[EntityId, T]:
         store = self._stores.setdefault(component_type, {})
-        return store  # type: ignore[return-value]
+        return cast(dict[EntityId, T], store)
 
     def clear_component_type(self, component_type: type[object]) -> None:
         for entity_id in list(self.components(component_type)):
@@ -102,7 +102,7 @@ class ComponentListProxy[T]:
             index += len(values)
         if not (0 <= index < len(values)):
             raise IndexError(index)
-        return next(islice(values, index, None))  # type: ignore[return-value]
+        return next(islice(values, index, None))
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, ComponentListProxy):

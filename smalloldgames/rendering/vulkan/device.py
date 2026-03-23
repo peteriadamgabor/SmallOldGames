@@ -39,8 +39,8 @@ from vulkan import (
     vkGetDeviceProcAddr,
     vkGetDeviceQueue,
     vkGetInstanceProcAddr,
-    vkGetPhysicalDeviceProperties,
     vkGetPhysicalDeviceMemoryProperties,
+    vkGetPhysicalDeviceProperties,
     vkGetPhysicalDeviceQueueFamilyProperties,
     vkMapMemory,
     vkUnmapMemory,
@@ -253,4 +253,6 @@ class VulkanDevice:
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
-        self.renderer.vertex_mapping = vkMapMemory(self.renderer.device, self.renderer.vertex_memory, 0, MAX_VERTEX_BYTES, 0)
+        self.renderer.vertex_mapping = vkMapMemory(
+            self.renderer.device, self.renderer.vertex_memory, 0, MAX_VERTEX_BYTES, 0
+        )

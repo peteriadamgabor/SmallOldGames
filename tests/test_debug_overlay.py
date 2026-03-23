@@ -13,7 +13,9 @@ class _FakeDrawList:
     def quad(self, *_args, **_kwargs) -> None:
         self.quad_calls += 1
 
-    def text(self, _x: float, _y: float, value: str, *, scale: float, color, centered: bool = False, world: bool = False) -> None:
+    def text(
+        self, _x: float, _y: float, value: str, *, scale: float, color, centered: bool = False, world: bool = False
+    ) -> None:
         self.text_values.append(value)
 
 
@@ -50,7 +52,7 @@ class DebugOverlayTests(unittest.TestCase):
 
         self.assertGreaterEqual(draw.quad_calls, 4)
         self.assertTrue(any("FPS 118" in value for value in draw.text_values))
-        self.assertTrue(any("UPD 1.2  REN 0.7  GPU 0.5" == value for value in draw.text_values))
+        self.assertTrue(any(value == "UPD 1.2  REN 0.7  GPU 0.5" for value in draw.text_values))
         self.assertTrue(any("LAUNCHER" in value for value in draw.text_values))
 
 

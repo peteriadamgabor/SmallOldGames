@@ -9,6 +9,27 @@ from smalloldgames.engine import InputState, ResourceRegistry
 from smalloldgames.engine.app import main as app_main
 from smalloldgames.engine.debug_overlay import FrameProfile
 from smalloldgames.games.benchmark_game import BenchmarkScene
+from smalloldgames.rendering.primitives import DrawList
+
+
+class _HeadlessExitScene:
+    def update(self, dt: float, inputs: InputState):
+        return None
+
+    def render(self, draw: DrawList) -> None:
+        return None
+
+    def window_title(self) -> str:
+        return "Small Old Games - Headless Benchmark Exit"
+
+    def music_track(self) -> str | None:
+        return None
+
+    def on_enter(self) -> None:
+        return None
+
+    def on_exit(self) -> None:
+        return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -21,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
 def _run_headless(args: argparse.Namespace) -> int:
     print("[benchmark] mode=headless")
     scene = BenchmarkScene(
-        lambda: None,
+        lambda: _HeadlessExitScene(),
         stage_duration_seconds=args.benchmark_stage_duration,
         results_path=args.benchmark_output,
         auto_exit_on_finish=True,

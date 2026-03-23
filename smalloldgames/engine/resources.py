@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from smalloldgames.assets import COMBINED_ATLAS, SHADERS_DIR, font_glyphs_from_atlas
+from smalloldgames.assets.sprites import PackedSprite
 from smalloldgames.rendering.primitives import DrawList
 from smalloldgames.rendering.vulkan_renderer import VulkanRenderer
 
@@ -13,9 +14,9 @@ class ResourceRegistry:
     def __init__(self, *, shader_dir: Path | None = None, sprite_atlas=COMBINED_ATLAS) -> None:
         self.shader_dir = shader_dir or SHADERS_DIR
         self.sprite_atlas = sprite_atlas
-        self._font_glyphs = None
+        self._font_glyphs: dict[str, PackedSprite] | None = None
 
-    def font_glyphs(self):
+    def font_glyphs(self) -> dict[str, PackedSprite]:
         if self._font_glyphs is None:
             self._font_glyphs = font_glyphs_from_atlas(self.sprite_atlas)
         return self._font_glyphs
