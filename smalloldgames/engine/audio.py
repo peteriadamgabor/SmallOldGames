@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from array import array
 from pathlib import Path
-from threading import Event, Thread
+from threading import Event, Lock, Thread
 import math
 import shutil
 import subprocess
@@ -66,6 +66,7 @@ class AudioEngine:
         self.enabled = True
         self._music_thread: Thread | None = None
         self._music_stop = Event()
+        self._music_lock = Lock()
         self._music_process: subprocess.Popen[bytes] | None = None
         self._current_music: str | None = None
         self._requested_music: str | None = None
@@ -116,15 +117,18 @@ class AudioEngine:
         if self._winsound is not None:
             self._winsound.PlaySound(None, 0)
         self._music_stop.set()
-        if self._music_process is not None:
+        with self._music_lock:
+            process = self._music_process
+        if process is not None:
             try:
-                self._music_process.terminate()
+                process.terminate()
             except OSError:
                 pass
-            self._music_process = None
         if self._music_thread is not None:
             self._music_thread.join(timeout=0.2)
             self._music_thread = None
+        with self._music_lock:
+            self._music_process = None
         self._music_stop.clear()
 
     def close(self) -> None:
@@ -158,18 +162,18 @@ class AudioEngine:
     def _music_loop(self, music_path: Path) -> None:
         while not self._music_stop.is_set():
             command = [*self._player, str(music_path)]
+            process: subprocess.Popen[bytes] | None = None
             try:
-                self._music_process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                self._music_process.wait(timeout=8.0)
-            except (OSError, subprocess.TimeoutExpired):
-                if self._music_process is not None:
-                    try:
-                        self._music_process.terminate()
-                    except OSError:
-                        pass
+                process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                with self._music_lock:
+                    self._music_process = process
+                process.wait()
+            except OSError:
                 break
             finally:
-                self._music_process = None
+                with self._music_lock:
+                    if self._music_process is process:
+                        self._music_process = None
             if self._music_stop.wait(0.05):
                 break
 

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+import warnings
 
 from smalloldgames.data.storage import ScoreRepository
 
@@ -48,6 +50,15 @@ class ScoreRepositoryTests(unittest.TestCase):
 
             self.assertFalse(repository.get_sound_enabled())
             self.assertFalse(repository.get_touch_controls_enabled())
+
+    def test_repository_closes_connections_cleanly(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            repository = ScoreRepository(Path(temp_dir) / "scores.sqlite3")
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always", ResourceWarning)
+                repository.best_score("sketch_hopper")
+                gc.collect()
+            self.assertEqual([warning for warning in caught if issubclass(warning.category, ResourceWarning)], [])
 
 
 if __name__ == "__main__":

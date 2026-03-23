@@ -16,6 +16,13 @@ class SketchHopperTests(unittest.TestCase):
     def make_scene(self) -> SketchHopperScene:
         return SketchHopperScene(lambda: None, seed=7)
 
+    class StubRandom:
+        def __init__(self, values: list[float]) -> None:
+            self._values = iter(values)
+
+        def random(self) -> float:
+            return next(self._values)
+
     def test_horizontal_wraparound(self) -> None:
         scene = self.make_scene()
         scene.player.x = scene.world_width - 6.0
@@ -168,6 +175,11 @@ class SketchHopperTests(unittest.TestCase):
         scene._tick_player(0.1, 0.0)
         self.assertTrue(platform.broken)
         self.assertLess(scene.player.velocity_y, 0.0)
+        scene._trim_platforms()
+        self.assertIn(platform, scene.platforms)
+        scene._tick_platforms(platform.state_timer)
+        scene._trim_platforms()
+        self.assertNotIn(platform, scene.platforms)
 
     def test_vanish_platform_gives_jump_then_disappears(self) -> None:
         scene = self.make_scene()
@@ -266,6 +278,35 @@ class SketchHopperTests(unittest.TestCase):
         scene._tick_projectiles(0.0)
         self.assertTrue(scene.game_over)
 
+    def test_hostile_projectile_does_not_damage_monsters(self) -> None:
+        scene = self.make_scene()
+        scene.player.x = 10.0
+        scene.player.y = 10.0
+        scene.monsters.append(
+            Monster(
+                x=120.0,
+                y=220.0,
+                width=scene.monster_width,
+                height=scene.monster_height,
+                velocity_x=0.0,
+            )
+        )
+        scene.projectiles.append(
+            Projectile(
+                x=128.0,
+                y=224.0,
+                width=10.0,
+                height=14.0,
+                velocity_y=0.0,
+                hostile=True,
+            )
+        )
+        scene._tick_projectiles(0.0)
+        self.assertEqual(len(scene.monsters), 1)
+        self.assertEqual(len(scene.projectiles), 1)
+        self.assertEqual(scene.score, 0)
+        self.assertFalse(scene.game_over)
+
     def test_black_hole_can_end_run(self) -> None:
         scene = self.make_scene()
         scene.black_holes.append(
@@ -280,6 +321,33 @@ class SketchHopperTests(unittest.TestCase):
         )
         scene._apply_black_holes(0.016)
         self.assertTrue(scene.game_over)
+
+    def test_shielded_black_hole_contact_moves_player_to_safety(self) -> None:
+        scene = self.make_scene()
+        scene.shield_timer = scene.shield_duration
+        original_position = (scene.player.x, scene.player.y)
+        scene.black_holes.append(
+            BlackHole(
+                x=scene.player.x,
+                y=scene.player.y,
+                width=scene.black_hole_size,
+                height=scene.black_hole_size,
+                pulse_phase=0.0,
+                pulse_speed=1.0,
+            )
+        )
+        scene._apply_black_holes(0.016)
+        self.assertFalse(scene.game_over)
+        self.assertEqual(scene.shield_timer, 0.0)
+        self.assertNotEqual((scene.player.x, scene.player.y), original_position)
+        scene._apply_black_holes(0.016)
+        self.assertFalse(scene.game_over)
+
+    def test_rocket_pickup_can_spawn_from_normal_generation(self) -> None:
+        scene = self.make_scene()
+        scene.random = self.StubRandom([1.0, 0.0])
+        pickup_kind = scene._choose_pickup_kind(scene.rocket_min_height + 10.0, 1.0)
+        self.assertEqual(pickup_kind, "rocket")
 
     def test_touch_controls_move_player(self) -> None:
         scene = self.make_scene()
@@ -405,6 +473,11 @@ class SketchHopperTests(unittest.TestCase):
             self.assertEqual(scene.best_score, 321)
             self.assertIsNotNone(scene.latest_rank)
             self.assertEqual(repository.top_scores("sketch_hopper", limit=1)[0].player_name, "ROCKET")
+
+    def test_zero_score_game_over_text_does_not_claim_board_update(self) -> None:
+        scene = self.make_scene()
+        scene.latest_rank = None
+        self.assertEqual(scene._game_over_rank_text(), "NO SCORE RECORDED")
 
 
 if __name__ == "__main__":

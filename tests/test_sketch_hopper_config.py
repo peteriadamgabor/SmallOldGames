@@ -52,6 +52,28 @@ pickup_min_gap_y = 1400.0
             reset_sketch_hopper_config(override_path)
             self.assertFalse(override_path.exists())
 
+    def test_invalid_override_types_are_ignored(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "sketch_hopper.toml"
+            defaults = SketchHopperConfig()
+            config_path.write_text(
+                """
+[player]
+gravity = "fast"
+
+[platforms]
+spring_min_height = "high"
+
+[pickups]
+pickup_min_gap_y = 1400.0
+""".strip(),
+                encoding="utf-8",
+            )
+            config = load_sketch_hopper_config(config_path)
+            self.assertEqual(config.gravity, defaults.gravity)
+            self.assertEqual(config.spring_min_height, defaults.spring_min_height)
+            self.assertEqual(config.pickup_min_gap_y, 1400.0)
+
 
 if __name__ == "__main__":
     unittest.main()

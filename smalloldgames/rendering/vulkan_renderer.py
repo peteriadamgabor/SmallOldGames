@@ -280,22 +280,26 @@ class VulkanRenderer:
         self.fp_acquire_next_image = None
         self.fp_queue_present = None
 
-        self._create_instance()
-        self._load_instance_extensions()
-        self._create_surface()
-        self._pick_physical_device()
-        self._create_logical_device()
-        self._load_device_extensions()
-        self._create_descriptor_set_layout()
-        self._create_swapchain()
-        self._create_render_pass()
-        self._create_command_pool()
-        self._create_texture_resources()
-        self._create_pipeline()
-        self._create_framebuffers()
-        self._create_vertex_buffer()
-        self._create_command_buffers()
-        self._create_sync_objects()
+        try:
+            self._create_instance()
+            self._load_instance_extensions()
+            self._create_surface()
+            self._pick_physical_device()
+            self._create_logical_device()
+            self._load_device_extensions()
+            self._create_descriptor_set_layout()
+            self._create_swapchain()
+            self._create_render_pass()
+            self._create_command_pool()
+            self._create_texture_resources()
+            self._create_pipeline()
+            self._create_framebuffers()
+            self._create_vertex_buffer()
+            self._create_command_buffers()
+            self._create_sync_objects()
+        except Exception:
+            self.close()
+            raise
 
     def render(self, vertices: array) -> None:
         if self.closed:
@@ -665,59 +669,60 @@ class VulkanRenderer:
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         )
-        mapped = vkMapMemory(self.device, staging_memory, 0, len(self.sprite_atlas.rgba_bytes), 0)
-        mapped[: len(self.sprite_atlas.rgba_bytes)] = self.sprite_atlas.rgba_bytes
-        vkUnmapMemory(self.device, staging_memory)
+        try:
+            mapped = vkMapMemory(self.device, staging_memory, 0, len(self.sprite_atlas.rgba_bytes), 0)
+            mapped[: len(self.sprite_atlas.rgba_bytes)] = self.sprite_atlas.rgba_bytes
+            vkUnmapMemory(self.device, staging_memory)
 
-        image_info = VkImageCreateInfo(
-            imageType=VK_IMAGE_TYPE_2D,
-            format=VK_FORMAT_R8G8B8A8_UNORM,
-            extent=VkExtent3D(width=self.sprite_atlas.width, height=self.sprite_atlas.height, depth=1),
-            mipLevels=1,
-            arrayLayers=1,
-            samples=VK_SAMPLE_COUNT_1_BIT,
-            tiling=VK_IMAGE_TILING_OPTIMAL,
-            usage=VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            sharingMode=VK_SHARING_MODE_EXCLUSIVE,
-            initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
-        )
-        self.texture_image = vkCreateImage(self.device, image_info, None)
-        requirements = vkGetImageMemoryRequirements(self.device, self.texture_image)
-        self.texture_memory = vkAllocateMemory(
-            self.device,
-            VkMemoryAllocateInfo(
-                allocationSize=requirements.size,
-                memoryTypeIndex=self._find_memory_type(
-                    requirements.memoryTypeBits,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            image_info = VkImageCreateInfo(
+                imageType=VK_IMAGE_TYPE_2D,
+                format=VK_FORMAT_R8G8B8A8_UNORM,
+                extent=VkExtent3D(width=self.sprite_atlas.width, height=self.sprite_atlas.height, depth=1),
+                mipLevels=1,
+                arrayLayers=1,
+                samples=VK_SAMPLE_COUNT_1_BIT,
+                tiling=VK_IMAGE_TILING_OPTIMAL,
+                usage=VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                sharingMode=VK_SHARING_MODE_EXCLUSIVE,
+                initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
+            )
+            self.texture_image = vkCreateImage(self.device, image_info, None)
+            requirements = vkGetImageMemoryRequirements(self.device, self.texture_image)
+            self.texture_memory = vkAllocateMemory(
+                self.device,
+                VkMemoryAllocateInfo(
+                    allocationSize=requirements.size,
+                    memoryTypeIndex=self._find_memory_type(
+                        requirements.memoryTypeBits,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                    ),
                 ),
-            ),
-            None,
-        )
-        vkBindImageMemory(self.device, self.texture_image, self.texture_memory, 0)
+                None,
+            )
+            vkBindImageMemory(self.device, self.texture_image, self.texture_memory, 0)
 
-        self._transition_image_layout(
-            self.texture_image,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            0,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-        )
-        self._copy_buffer_to_image(staging_buffer, self.texture_image, self.sprite_atlas.width, self.sprite_atlas.height)
-        self._transition_image_layout(
-            self.texture_image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_ACCESS_SHADER_READ_BIT,
-        )
-
-        vkDestroyBuffer(self.device, staging_buffer, None)
-        vkFreeMemory(self.device, staging_memory, None)
+            self._transition_image_layout(
+                self.texture_image,
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                0,
+                VK_ACCESS_TRANSFER_WRITE_BIT,
+            )
+            self._copy_buffer_to_image(staging_buffer, self.texture_image, self.sprite_atlas.width, self.sprite_atlas.height)
+            self._transition_image_layout(
+                self.texture_image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_ACCESS_TRANSFER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+            )
+        finally:
+            vkDestroyBuffer(self.device, staging_buffer, None)
+            vkFreeMemory(self.device, staging_memory, None)
 
         self.texture_view = self._create_image_view(self.texture_image, VK_FORMAT_R8G8B8A8_UNORM)
         self.texture_sampler = vkCreateSampler(
@@ -961,6 +966,9 @@ class VulkanRenderer:
         if self.pipeline is not None:
             vkDestroyPipeline(self.device, self.pipeline, None)
             self.pipeline = None
+        if self.pipeline_layout is not None:
+            vkDestroyPipelineLayout(self.device, self.pipeline_layout, None)
+            self.pipeline_layout = None
         if self.render_pass is not None:
             vkDestroyRenderPass(self.device, self.render_pass, None)
             self.render_pass = None

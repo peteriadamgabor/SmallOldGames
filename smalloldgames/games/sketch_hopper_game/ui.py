@@ -198,10 +198,10 @@ class SketchHopperUIMixin:
     def _balance_row_rects(self) -> list[tuple[float, float, float, float]]:
         return [self._balance_row_rect(index) for index in range(len(BALANCE_FIELDS))]
     def _balance_minus_rect(self, index: int) -> tuple[float, float, float, float]:
-        x, y, _, height = self._balance_row_rect(index)
+        _, y, _, height = self._balance_row_rect(index)
         return (372.0, y, 42.0, height)
     def _balance_plus_rect(self, index: int) -> tuple[float, float, float, float]:
-        x, y, _, height = self._balance_row_rect(index)
+        _, y, _, height = self._balance_row_rect(index)
         return (422.0, y, 42.0, height)
     def _balance_save_rect(self) -> tuple[float, float, float, float]:
         return (70.0, 222.0, 96.0, 38.0)

@@ -35,43 +35,54 @@ class App:
     def __init__(self) -> None:
         self.audio = AudioEngine()
         self.score_repository = ScoreRepository()
-        self.audio.set_enabled(self.score_repository.get_sound_enabled())
-
-        if not glfw.init():
-            raise RuntimeError("GLFW could not initialize. Run the app inside a graphical desktop session.")
-
-        glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
-        glfw.window_hint(glfw.RESIZABLE, glfw.TRUE)
-        self.window = glfw.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Small Old Games", None, None)
-        if not self.window:
-            glfw.terminate()
-            raise RuntimeError("GLFW could not create a window.")
-        glfw.set_window_size_limits(self.window, 360, 640, glfw.DONT_CARE, glfw.DONT_CARE)
-
+        self.window = None
+        self.renderer = None
+        self.draw_list = None
+        self.games = None
+        self.scene = None
         self.inputs = InputState()
-        glfw.set_key_callback(self.window, self._on_key)
-        glfw.set_cursor_pos_callback(self.window, self._on_cursor_pos)
-        glfw.set_mouse_button_callback(self.window, self._on_mouse_button)
+        self._glfw_initialized = False
 
-        shader_dir = SHADERS_DIR
-        self.renderer = VulkanRenderer(self.window, shader_dir=shader_dir, sprite_atlas=SKETCH_HOPPER_ATLAS)
-        self.draw_list = DrawList(WINDOW_WIDTH, WINDOW_HEIGHT, white_uv=SKETCH_HOPPER_ATLAS.white_uv)
-        self.games = GameRegistry(
-            (
-                GameDefinition(
-                    id="sketch_hopper",
-                    title="SKETCH HOPPER",
-                    subtitle="ENDLESS JUMPER",
-                    detail="PRESS ENTER OR SPACE",
-                    score_key="sketch_hopper",
-                    art_variant="hopper",
-                    music_track="sketch_hopper",
-                    make_scene=self._make_sketch_hopper,
-                ),
+        try:
+            self.audio.set_enabled(self.score_repository.get_sound_enabled())
+
+            if not glfw.init():
+                raise RuntimeError("GLFW could not initialize. Run the app inside a graphical desktop session.")
+            self._glfw_initialized = True
+
+            glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
+            glfw.window_hint(glfw.RESIZABLE, glfw.TRUE)
+            self.window = glfw.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Small Old Games", None, None)
+            if not self.window:
+                raise RuntimeError("GLFW could not create a window.")
+            glfw.set_window_size_limits(self.window, 360, 640, glfw.DONT_CARE, glfw.DONT_CARE)
+
+            glfw.set_key_callback(self.window, self._on_key)
+            glfw.set_cursor_pos_callback(self.window, self._on_cursor_pos)
+            glfw.set_mouse_button_callback(self.window, self._on_mouse_button)
+
+            shader_dir = SHADERS_DIR
+            self.renderer = VulkanRenderer(self.window, shader_dir=shader_dir, sprite_atlas=SKETCH_HOPPER_ATLAS)
+            self.draw_list = DrawList(WINDOW_WIDTH, WINDOW_HEIGHT, white_uv=SKETCH_HOPPER_ATLAS.white_uv)
+            self.games = GameRegistry(
+                (
+                    GameDefinition(
+                        id="sketch_hopper",
+                        title="SKETCH HOPPER",
+                        subtitle="ENDLESS JUMPER",
+                        detail="PRESS ENTER OR SPACE",
+                        score_key="sketch_hopper",
+                        art_variant="hopper",
+                        music_track="sketch_hopper",
+                        make_scene=self._make_sketch_hopper,
+                    ),
+                )
             )
-        )
-        self.scene: Scene = self._make_launcher()
-        self.audio.play_music(self.scene.music_track())
+            self.scene = self._make_launcher()
+            self.audio.play_music(self.scene.music_track())
+        except Exception:
+            self.close()
+            raise
 
     def run(self) -> None:
         last_time = time.perf_counter()
@@ -97,11 +108,17 @@ class App:
 
     def close(self) -> None:
         try:
-            self.renderer.close()
+            if self.renderer is not None:
+                self.renderer.close()
+                self.renderer = None
         finally:
             self.audio.close()
-            glfw.destroy_window(self.window)
-            glfw.terminate()
+            if self.window is not None:
+                glfw.destroy_window(self.window)
+                self.window = None
+            if self._glfw_initialized:
+                glfw.terminate()
+                self._glfw_initialized = False
 
     def _make_sketch_hopper(self) -> SketchHopperScene:
         return SketchHopperScene(self._make_launcher, score_repository=self.score_repository, audio=self.audio)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,7 +39,7 @@ class ScoreRepository:
 
         safe_name = self._normalize_player_name(player_name or self.get_player_name())
         played_at = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 "INSERT INTO scores (game, player_name, score, played_at) VALUES (?, ?, ?, ?)",
                 (game, safe_name, score, played_at),
@@ -50,12 +51,12 @@ class ScoreRepository:
         return int(rank)
 
     def best_score(self, game: str) -> int:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute("SELECT COALESCE(MAX(score), 0) FROM scores WHERE game = ?", (game,)).fetchone()
         return int(row[0])
 
     def top_scores(self, game: str, *, limit: int = 5) -> list[ScoreEntry]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
                 SELECT COALESCE(player_name, 'PLAYER'), score, played_at
@@ -72,7 +73,7 @@ class ScoreRepository:
         ]
 
     def stats(self, game: str) -> ScoreStats:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute(
                 """
                 SELECT COUNT(*), COALESCE(AVG(score), 0), COALESCE(MAX(score), 0)
@@ -84,7 +85,7 @@ class ScoreRepository:
         return ScoreStats(total_runs=int(row[0]), average_score=int(round(row[1])), best_score=int(row[2]))
 
     def get_player_name(self) -> str:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute("SELECT value FROM settings WHERE key = 'player_name'").fetchone()
         if row is None:
             return "PLAYER"
@@ -92,7 +93,7 @@ class ScoreRepository:
 
     def set_player_name(self, player_name: str) -> str:
         safe_name = self._normalize_player_name(player_name)
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 INSERT INTO settings (key, value) VALUES ('player_name', ?)
@@ -117,7 +118,7 @@ class ScoreRepository:
         return enabled
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS scores (
@@ -156,6 +157,18 @@ class ScoreRepository:
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.database_path)
 
+    @contextmanager
+    def _connection(self):
+        connection = self._connect()
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
     @staticmethod
     def _normalize_player_name(player_name: str) -> str:
         cleaned = "".join(character for character in player_name.upper() if character.isalnum() or character == " ")
@@ -164,14 +177,14 @@ class ScoreRepository:
         return cleaned or "PLAYER"
 
     def _get_bool_setting(self, key: str, default: bool) -> bool:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
         if row is None:
             return default
         return row[0] == "1"
 
     def _set_bool_setting(self, key: str, value: bool) -> None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute(
                 """
                 INSERT INTO settings (key, value) VALUES (?, ?)

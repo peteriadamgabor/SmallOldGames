@@ -229,7 +229,7 @@ class SketchHopperSystemsMixin:
                         self._play_sound("enemy_shot")
                         self.game_over = True
                     dead_projectiles.append(entity_id)
-                    continue
+                continue
 
             hit_index = next(
                 (
@@ -324,11 +324,13 @@ class SketchHopperSystemsMixin:
                 continue
             if platform.kind == "broken":
                 platform.broken = True
+                platform.state_timer = 0.12
                 self._trigger_feedback("BROKEN", (0.79, 0.44, 0.18, 0.92), shake=4.0)
                 self._spawn_impact(platform.x + platform.width * 0.5, platform.y + platform.height * 0.5, (0.79, 0.44, 0.18, 0.92))
                 return
             if platform.kind == "fake":
                 platform.broken = True
+                platform.state_timer = 0.12
                 self._play_sound("break")
                 self._trigger_feedback("FAKE!", (0.95, 0.54, 0.20, 0.92), shake=5.5)
                 self._spawn_impact(platform.x + platform.width * 0.5, platform.y + platform.height * 0.5, (0.95, 0.54, 0.20, 0.92))
@@ -644,14 +646,25 @@ class SketchHopperSystemsMixin:
         )
         self.highest_pickup_y = max(self.highest_pickup_y, y)
     def _choose_pickup_kind(self, height: float, difficulty: float) -> str | None:
-        kind_roll = self.random.random()
-        if height >= self.shield_min_height and kind_roll < self.shield_spawn_chance_base + self.shield_spawn_chance_difficulty * difficulty:
+        if (
+            height >= self.shield_min_height
+            and self.random.random() < self.shield_spawn_chance_base + self.shield_spawn_chance_difficulty * difficulty
+        ):
             return "shield"
-        if height >= self.rocket_min_height and kind_roll < self.rocket_spawn_chance_base + self.rocket_spawn_chance_difficulty * difficulty:
+        if (
+            height >= self.rocket_min_height
+            and self.random.random() < self.rocket_spawn_chance_base + self.rocket_spawn_chance_difficulty * difficulty
+        ):
             return "rocket"
-        if height >= self.propeller_min_height and kind_roll < self.propeller_spawn_chance_base + self.propeller_spawn_chance_difficulty * difficulty:
+        if (
+            height >= self.propeller_min_height
+            and self.random.random() < self.propeller_spawn_chance_base + self.propeller_spawn_chance_difficulty * difficulty
+        ):
             return "propeller"
-        if height >= self.boots_min_height and kind_roll < self.boots_spawn_chance_base + self.boots_spawn_chance_difficulty * difficulty:
+        if (
+            height >= self.boots_min_height
+            and self.random.random() < self.boots_spawn_chance_base + self.boots_spawn_chance_difficulty * difficulty
+        ):
             return "boots"
         if height < self.pickup_min_height:
             return None
@@ -728,7 +741,11 @@ class SketchHopperSystemsMixin:
         return True
     def _trim_platforms(self) -> None:
         floor = self.camera_y - 200.0
-        self.platforms = [platform for platform in self.platforms if platform.y + platform.height >= floor and not platform.broken]
+        self.platforms = [
+            platform
+            for platform in self.platforms
+            if platform.y + platform.height >= floor and (not platform.broken or platform.state_timer > 0.0)
+        ]
     def _trim_clouds(self) -> None:
         self._ensure_cloud_components()
         dead_entities: list[int] = []
@@ -929,6 +946,17 @@ class SketchHopperSystemsMixin:
             distance = math.hypot(dx, dy)
             if distance <= size.width * 0.28:
                 if self._consume_shield("WARP SAVED"):
+                    if distance > 0.0:
+                        away_x = -dx / distance
+                        away_y = -dy / distance
+                    else:
+                        away_x = 0.0
+                        away_y = 1.0
+                    escape_distance = max(self.player.width, self.player.height) * 0.5 + max(size.width, size.height) * 0.5 + 12.0
+                    player_cx = hole_cx + away_x * escape_distance
+                    player_cy = hole_cy + away_y * escape_distance
+                    self.player.x = (player_cx - self.player.width * 0.5) % self.world_width
+                    self.player.y = player_cy - self.player.height * 0.5
                     continue
                 self.game_over = True
                 return

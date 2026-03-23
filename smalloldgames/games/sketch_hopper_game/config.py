@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 from pathlib import Path
+from typing import get_type_hints
 import tomllib
 
 from smalloldgames.assets import CONFIG_DIR
@@ -401,13 +402,16 @@ def _merge_file(config: SketchHopperConfig, config_path: Path) -> SketchHopperCo
         data = tomllib.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError):
         return config
+    field_types = get_type_hints(SketchHopperConfig)
     merged: dict[str, object] = {field.name: getattr(config, field.name) for field in fields(config)}
     for section in data.values():
         if not isinstance(section, dict):
             continue
         for key, value in section.items():
             if key in merged:
-                merged[key] = value
+                coerced = _coerce_config_value(value, field_types[key])
+                if coerced is not None:
+                    merged[key] = coerced
     return SketchHopperConfig(**merged)
 
 
@@ -419,3 +423,17 @@ def _format_toml_value(value: object) -> str:
     if isinstance(value, float):
         return repr(value)
     raise TypeError(f"Unsupported TOML value: {value!r}")
+
+
+def _coerce_config_value(value: object, expected_type: type[object]) -> object | None:
+    if expected_type is bool:
+        return value if isinstance(value, bool) else None
+    if expected_type is int:
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        return value
+    if expected_type is float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        return float(value)
+    return None

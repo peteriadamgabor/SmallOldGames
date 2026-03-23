@@ -45,10 +45,10 @@ class SketchHopperRenderingMixin:
     def _render_platforms(self, draw: DrawList) -> None:
         for platform in self.platforms:
             sprite = PLATFORM_STABLE_SPRITE
-            if platform.kind == "moving":
-                sprite = PLATFORM_MOVING_SPRITE
-            elif platform.kind == "broken":
+            if platform.broken or platform.kind == "broken":
                 sprite = PLATFORM_BROKEN_SPRITE
+            elif platform.kind == "moving":
+                sprite = PLATFORM_MOVING_SPRITE
             draw.sprite(
                 platform.x,
                 platform.y - 1.0,
@@ -104,7 +104,7 @@ class SketchHopperRenderingMixin:
                     (0.25, 0.13, 0.05, 1.0),
                     world=True,
                 )
-            if platform.kind == "fake":
+            if platform.kind == "fake" and not platform.broken:
                 draw.quad(
                     platform.x + 4.0,
                     platform.y + 3.0,
@@ -369,7 +369,7 @@ class SketchHopperRenderingMixin:
             draw.text(exit_x + exit_w * 0.5, exit_y + 18, "LAUNCHER", scale=1.5, color=(0.86, 0.90, 0.94, 1.0), centered=True)
     def _game_over_rank_text(self) -> str:
         if self.latest_rank is None:
-            return "LOCAL BOARD UPDATED"
+            return "NO SCORE RECORDED"
         return f"LOCAL RANK {self.latest_rank}"
     def _render_touch_controls(self, draw: DrawList) -> None:
         left_x, left_y, left_w, left_h = self._left_touch_rect()
