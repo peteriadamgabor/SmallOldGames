@@ -33,3 +33,10 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# AI instruction files
+GEMINI.md
+CLAUDE.md
+COPILOT.md
+AGENTS.md
+AI.md

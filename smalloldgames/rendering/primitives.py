@@ -2,11 +2,17 @@ from __future__ import annotations
 
 from array import array
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from smalloldgames.assets.bitmap_font import FONT_5X7, normalize_text
 from smalloldgames.assets.sprites import PackedSprite
 
 Color = tuple[float, float, float, float]
+
+
+@lru_cache(maxsize=256)
+def _cached_normalize(value: str) -> str:
+    return normalize_text(value)
 
 
 @dataclass(slots=True)
@@ -17,9 +23,17 @@ class DrawList:
     font_glyphs: dict[str, PackedSprite] = field(default_factory=dict)
     camera_y: float = 0.0
     vertices: array = field(default_factory=lambda: array("f"))
+    _inv_w: float = 0.0
+    _inv_h: float = 0.0
+    _cam_y: float = 0.0
+
+    def __post_init__(self) -> None:
+        self._inv_w = 2.0 / self.width
+        self._inv_h = 2.0 / self.height
 
     def set_camera(self, camera_y: float) -> None:
         self.camera_y = camera_y
+        self._cam_y = camera_y
 
     def clear(self) -> None:
         del self.vertices[:]
@@ -37,15 +51,26 @@ class DrawList:
         top_left: Color,
         world: bool = True,
     ) -> None:
-        uv = self.white_uv
-        x0, y0 = self._to_ndc(x, y, world)
-        x1, y1 = self._to_ndc(x + width, y + height, world)
-        self._push_vertex(x0, y0, bottom_left, uv)
-        self._push_vertex(x1, y0, bottom_right, uv)
-        self._push_vertex(x1, y1, top_right, uv)
-        self._push_vertex(x0, y0, bottom_left, uv)
-        self._push_vertex(x1, y1, top_right, uv)
-        self._push_vertex(x0, y1, top_left, uv)
+        inv_w = self._inv_w
+        inv_h = self._inv_h
+        cam = self._cam_y if world else 0.0
+        x0 = x * inv_w - 1.0
+        y0 = (y - cam) * inv_h - 1.0
+        x1 = (x + width) * inv_w - 1.0
+        y1 = (y + height - cam) * inv_h - 1.0
+        u, v = self.white_uv
+        bl_r, bl_g, bl_b, bl_a = bottom_left
+        br_r, br_g, br_b, br_a = bottom_right
+        tr_r, tr_g, tr_b, tr_a = top_right
+        tl_r, tl_g, tl_b, tl_a = top_left
+        self.vertices.extend((
+            x0, y0, bl_r, bl_g, bl_b, bl_a, u, v,
+            x1, y0, br_r, br_g, br_b, br_a, u, v,
+            x1, y1, tr_r, tr_g, tr_b, tr_a, u, v,
+            x0, y0, bl_r, bl_g, bl_b, bl_a, u, v,
+            x1, y1, tr_r, tr_g, tr_b, tr_a, u, v,
+            x0, y1, tl_r, tl_g, tl_b, tl_a, u, v,
+        ))
 
     def quad(
         self,
@@ -57,17 +82,23 @@ class DrawList:
         *,
         world: bool = True,
     ) -> None:
-        self.gradient_quad(
-            x,
-            y,
-            width,
-            height,
-            bottom_left=color,
-            bottom_right=color,
-            top_right=color,
-            top_left=color,
-            world=world,
-        )
+        inv_w = self._inv_w
+        inv_h = self._inv_h
+        cam = self._cam_y if world else 0.0
+        x0 = x * inv_w - 1.0
+        y0 = (y - cam) * inv_h - 1.0
+        x1 = (x + width) * inv_w - 1.0
+        y1 = (y + height - cam) * inv_h - 1.0
+        r, g, b, a = color
+        u, v = self.white_uv
+        self.vertices.extend((
+            x0, y0, r, g, b, a, u, v,
+            x1, y0, r, g, b, a, u, v,
+            x1, y1, r, g, b, a, u, v,
+            x0, y0, r, g, b, a, u, v,
+            x1, y1, r, g, b, a, u, v,
+            x0, y1, r, g, b, a, u, v,
+        ))
 
     def triangle(
         self,
@@ -78,10 +109,16 @@ class DrawList:
         *,
         world: bool = True,
     ) -> None:
-        uv = self.white_uv
-        self._push_vertex(*self._to_ndc(*p0, world), color, uv)
-        self._push_vertex(*self._to_ndc(*p1, world), color, uv)
-        self._push_vertex(*self._to_ndc(*p2, world), color, uv)
+        inv_w = self._inv_w
+        inv_h = self._inv_h
+        cam = self._cam_y if world else 0.0
+        r, g, b, a = color
+        u, v = self.white_uv
+        self.vertices.extend((
+            p0[0] * inv_w - 1.0, (p0[1] - cam) * inv_h - 1.0, r, g, b, a, u, v,
+            p1[0] * inv_w - 1.0, (p1[1] - cam) * inv_h - 1.0, r, g, b, a, u, v,
+            p2[0] * inv_w - 1.0, (p2[1] - cam) * inv_h - 1.0, r, g, b, a, u, v,
+        ))
 
     def text(
         self,
@@ -94,20 +131,42 @@ class DrawList:
         centered: bool = False,
         world: bool = False,
     ) -> None:
-        text = normalize_text(value)
+        text = _cached_normalize(value)
         if centered:
             x -= self.measure_text(text, scale=scale) * 0.5
+        inv_w = self._inv_w
+        inv_h = self._inv_h
+        cam = self._cam_y if world else 0.0
+        r, g, b, a = color
+        font_glyphs = self.font_glyphs
+        vertices = self.vertices
+        char_step = 6 * scale
+        glyph_w = 5 * scale
+        glyph_h = 7 * scale
         cursor_x = x
         for character in text:
             if character == " ":
-                cursor_x += 6 * scale
+                cursor_x += char_step
                 continue
-            sprite = self.font_glyphs.get(character)
-            if sprite is None:
-                self._draw_bitmap_glyph(cursor_x, y, FONT_5X7[character], scale=scale, color=color, world=world)
+            sprite = font_glyphs.get(character)
+            if sprite is not None:
+                x0 = cursor_x * inv_w - 1.0
+                y0 = (y - cam) * inv_h - 1.0
+                x1 = (cursor_x + glyph_w) * inv_w - 1.0
+                y1 = (y + glyph_h - cam) * inv_h - 1.0
+                u0, u1 = sprite.u0, sprite.u1
+                v0, v1 = sprite.v1, sprite.v0
+                vertices.extend((
+                    x0, y0, r, g, b, a, u0, v0,
+                    x1, y0, r, g, b, a, u1, v0,
+                    x1, y1, r, g, b, a, u1, v1,
+                    x0, y0, r, g, b, a, u0, v0,
+                    x1, y1, r, g, b, a, u1, v1,
+                    x0, y1, r, g, b, a, u0, v1,
+                ))
             else:
-                self._textured_quad(cursor_x, y, 5 * scale, 7 * scale, color, sprite, world=world)
-            cursor_x += 6 * scale
+                self._draw_bitmap_glyph(cursor_x, y, FONT_5X7[character], scale=scale, color=color, world=world)
+            cursor_x += char_step
 
     def sprite(
         self,
@@ -120,14 +179,27 @@ class DrawList:
         world: bool = True,
         flip_x: bool = False,
     ) -> None:
-        self._textured_quad(x, y, width, height, (1.0, 1.0, 1.0, 1.0), sprite, world=world, flip_x=flip_x)
+        inv_w = self._inv_w
+        inv_h = self._inv_h
+        cam = self._cam_y if world else 0.0
+        x0 = x * inv_w - 1.0
+        y0 = (y - cam) * inv_h - 1.0
+        x1 = (x + width) * inv_w - 1.0
+        y1 = (y + height - cam) * inv_h - 1.0
+        u0, u1 = (sprite.u1, sprite.u0) if flip_x else (sprite.u0, sprite.u1)
+        v0, v1 = sprite.v1, sprite.v0
+        self.vertices.extend((
+            x0, y0, 1.0, 1.0, 1.0, 1.0, u0, v0,
+            x1, y0, 1.0, 1.0, 1.0, 1.0, u1, v0,
+            x1, y1, 1.0, 1.0, 1.0, 1.0, u1, v1,
+            x0, y0, 1.0, 1.0, 1.0, 1.0, u0, v0,
+            x1, y1, 1.0, 1.0, 1.0, 1.0, u1, v1,
+            x0, y1, 1.0, 1.0, 1.0, 1.0, u0, v1,
+        ))
 
     @staticmethod
     def measure_text(value: str, *, scale: float) -> float:
-        return max(len(normalize_text(value)) * 6 * scale - scale, 0.0)
-
-    def _push_vertex(self, x: float, y: float, color: Color, uv: tuple[float, float]) -> None:
-        self.vertices.extend((x, y, *color, *uv))
+        return max(len(_cached_normalize(value)) * 6 * scale - scale, 0.0)
 
     def _draw_bitmap_glyph(
         self,
@@ -150,30 +222,3 @@ class DrawList:
                         color,
                         world=world,
                     )
-
-    def _textured_quad(
-        self,
-        x: float,
-        y: float,
-        width: float,
-        height: float,
-        color: Color,
-        sprite: PackedSprite,
-        *,
-        world: bool,
-        flip_x: bool = False,
-    ) -> None:
-        x0, y0 = self._to_ndc(x, y, world)
-        x1, y1 = self._to_ndc(x + width, y + height, world)
-        u0, u1 = (sprite.u1, sprite.u0) if flip_x else (sprite.u0, sprite.u1)
-        v0, v1 = sprite.v1, sprite.v0
-        self._push_vertex(x0, y0, color, (u0, v0))
-        self._push_vertex(x1, y0, color, (u1, v0))
-        self._push_vertex(x1, y1, color, (u1, v1))
-        self._push_vertex(x0, y0, color, (u0, v0))
-        self._push_vertex(x1, y1, color, (u1, v1))
-        self._push_vertex(x0, y1, color, (u0, v1))
-
-    def _to_ndc(self, x: float, y: float, world: bool) -> tuple[float, float]:
-        screen_y = y - self.camera_y if world else y
-        return (x / self.width) * 2.0 - 1.0, (screen_y / self.height) * 2.0 - 1.0

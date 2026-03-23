@@ -315,13 +315,13 @@ class VulkanRenderer:
             self._recreate_swapchain()
 
         vertex_count = len(vertices) // 8
-        data = vertices.tobytes()
-        if len(data) > MAX_VERTEX_BYTES:
-            raise ValueError(f"Frame uses {len(data)} bytes, above the {MAX_VERTEX_BYTES} byte vertex budget.")
+        data_size = len(vertices) * vertices.itemsize
+        if data_size > MAX_VERTEX_BYTES:
+            raise ValueError(f"Frame uses {data_size} bytes, above the {MAX_VERTEX_BYTES} byte vertex budget.")
 
-        if data:
-            mapped = vkMapMemory(self.device, self.vertex_memory, 0, len(data), 0)
-            mapped[: len(data)] = data
+        if data_size:
+            mapped = vkMapMemory(self.device, self.vertex_memory, 0, data_size, 0)
+            ffi.memmove(mapped, ffi.from_buffer(vertices), data_size)
             vkUnmapMemory(self.device, self.vertex_memory)
 
         vkWaitForFences(self.device, 1, [self.in_flight_fence], VK_TRUE, UINT64_MAX)

@@ -21,6 +21,11 @@ Repository automation:
 - Local SQLite scoreboard
 - Balance config file for gameplay tuning
 - Automated unit tests for core gameplay and engine behavior
+- Debug overlay with FPS counter (toggle with F3)
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) for more information.
 
 ## Current Target
 
@@ -266,6 +271,7 @@ For distribution, share the generated `.tar.gz` archive or the full `dist/SmallO
 - `Space`: shoot
 - `P`: pause
 - `R`: restart run
+- `F3`: toggle debug overlay (FPS counter)
 - `Esc`: return to launcher
 - `Q`: quit application
 - Mouse/touch-style UI: menu buttons, pause button, on-screen controls

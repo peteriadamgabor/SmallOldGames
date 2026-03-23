@@ -44,6 +44,8 @@ class App:
         self.scene = None
         self.inputs = InputState()
         self._glfw_initialized = False
+        self._show_debug = False
+        self._fps = 0.0
 
         try:
             self.audio.set_enabled(self.score_repository.get_sound_enabled())
@@ -94,12 +96,21 @@ class App:
     def run(self) -> None:
         last_time = time.perf_counter()
         accumulator = 0.0
+        fps_timer = 0.0
+        fps_counter = 0
         while not glfw.window_should_close(self.window):
             glfw.poll_events()
             now = time.perf_counter()
             frame_time = min(now - last_time, MAX_FRAME_DT)
             last_time = now
             accumulator += frame_time
+
+            fps_timer += frame_time
+            fps_counter += 1
+            if fps_timer >= 0.5:
+                self._fps = fps_counter / fps_timer
+                fps_timer = 0.0
+                fps_counter = 0
 
             consumed_inputs = False
             while accumulator >= FIXED_DT:
@@ -119,6 +130,30 @@ class App:
             self.draw_list.clear()
             self.draw_list.set_camera(0.0)
             self.scene.render(self.draw_list)
+
+            if self._show_debug:
+                fps_text = f"FPS: {int(self._fps)}"
+                padding = 8.0
+                scale = 3.0
+                text_w = self.draw_list.measure_text(fps_text, scale=scale)
+                text_h = 7.0 * scale
+                self.draw_list.quad(
+                    0.0,
+                    WINDOW_HEIGHT - text_h - padding * 2.0,
+                    text_w + padding * 2.0,
+                    text_h + padding * 2.0,
+                    (0.0, 0.0, 0.0, 0.7),
+                    world=False,
+                )
+                self.draw_list.text(
+                    padding,
+                    WINDOW_HEIGHT - text_h - padding,
+                    fps_text,
+                    scale=scale,
+                    color=(0.0, 1.0, 0.0, 1.0),
+                    world=False,
+                )
+
             self.renderer.render(self.draw_list.vertices)
 
     def close(self) -> None:
@@ -149,6 +184,8 @@ class App:
         self.inputs.on_key(key, action)
         if key == glfw.KEY_Q and action == glfw.PRESS:
             glfw.set_window_should_close(self.window, True)
+        if key == glfw.KEY_F3 and action == glfw.PRESS:
+            self._show_debug = not self._show_debug
 
     def _on_cursor_pos(self, _window: glfw._GLFWwindow, xpos: float, ypos: float) -> None:
         window_width, window_height = glfw.get_window_size(self.window)
