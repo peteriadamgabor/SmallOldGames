@@ -86,19 +86,19 @@ class LauncherScene:
         return None
 
     def render(self, draw: DrawList) -> None:
-        title_scale = fit_scale(draw, "SMALL OLD GAMES", preferred=7, minimum=4, max_width=draw.width - 48)
+        title_scale = fit_scale(draw, "SMALL OLD GAMES", preferred=5, minimum=3, max_width=draw.width - 48)
         subtitle_scale = fit_scale(
             draw,
             "RETRO MOBILE REMAKES IN PYTHON + VULKAN",
-            preferred=3,
+            preferred=2,
             minimum=1,
             max_width=draw.width - 44,
         )
         draw_menu_background(draw)
-        draw.text(draw.width * 0.5, 834, "SMALL OLD GAMES", scale=title_scale, color=TEXT_LIGHT, centered=True)
+        draw.text(draw.width * 0.5, 844, "SMALL OLD GAMES", scale=title_scale, color=TEXT_LIGHT, centered=True)
         draw.text(
             draw.width * 0.5,
-            790,
+            806,
             "RETRO MOBILE REMAKES IN PYTHON + VULKAN",
             scale=subtitle_scale,
             color=TEXT_MUTED,
@@ -143,8 +143,12 @@ class LauncherScene:
             variant="settings",
         )
 
-        draw.text(draw.width * 0.5, 82, "ARROWS / WASD MOVE   ENTER OPENS", scale=3, color=TEXT_MUTED, centered=True)
-        draw.text(draw.width * 0.5, 52, "TAB LOCAL BOARD   P QUICK PLAY", scale=2, color=ACCENT, centered=True)
+        help1 = "ARROWS  WASD MOVE  ENTER OPEN"
+        help1_scale = fit_scale(draw, help1, preferred=2, minimum=1, max_width=draw.width - 32)
+        draw.text(draw.width * 0.5, 72, help1, scale=help1_scale, color=TEXT_MUTED, centered=True)
+        help2 = "TAB LOCAL BOARD  P QUICK PLAY"
+        help2_scale = fit_scale(draw, help2, preferred=2, minimum=1, max_width=draw.width - 32)
+        draw.text(draw.width * 0.5, 42, help2, scale=help2_scale, color=ACCENT, centered=True)
 
     @staticmethod
     def music_track() -> str | None:
@@ -167,13 +171,15 @@ class LauncherScene:
         )
 
         title, subtitle, detail_lines, status_color, variant = self._feature_copy()
-        title_scale = fit_scale(draw, title, preferred=6, minimum=3, max_width=220)
-        subtitle_scale = fit_scale(draw, subtitle, preferred=3, minimum=2, max_width=220)
-        draw.text(x + 24, y + 196, title, scale=title_scale, color=TEXT_LIGHT, world=False)
-        draw.text(x + 24, y + 162, subtitle, scale=subtitle_scale, color=TEXT_MUTED, world=False)
+        text_max = width * 0.52
+        title_scale = fit_scale(draw, title, preferred=4, minimum=2, max_width=text_max)
+        subtitle_scale = fit_scale(draw, subtitle, preferred=2, minimum=1, max_width=text_max)
+        draw.text(x + 18, y + 196, title, scale=title_scale, color=TEXT_LIGHT, world=False)
+        draw.text(x + 18, y + 166, subtitle, scale=subtitle_scale, color=TEXT_MUTED, world=False)
         for index, line in enumerate(detail_lines):
             color = status_color if index == 0 else TEXT_MUTED
-            draw.text(x + 24, y + 118 - index * 28, line, scale=2, color=color, world=False)
+            detail_scale = fit_scale(draw, line, preferred=2, minimum=1, max_width=text_max)
+            draw.text(x + 18, y + 124 - index * 24, line, scale=detail_scale, color=color, world=False)
         self._draw_feature_art(draw, x=x, y=y, variant=variant)
 
     def _draw_game_card(
@@ -196,9 +202,10 @@ class LauncherScene:
             style=ACTIVE_CARD if active else IDLE_CARD,
             inset=10,
         )
-        title_scale = fit_scale(draw, title, preferred=3, minimum=2, max_width=width - 24)
-        draw.text(x + 14, y + 26, detail, scale=2, color=ACCENT if active else TEXT_MUTED, world=False)
-        draw.text(x + 14, y + 50, title, scale=title_scale, color=TEXT_LIGHT, world=False)
+        title_scale = fit_scale(draw, title, preferred=2, minimum=1, max_width=width - 20)
+        detail_scale = fit_scale(draw, detail, preferred=2, minimum=1, max_width=width - 20)
+        draw.text(x + 10, y + 18, detail, scale=detail_scale, color=ACCENT if active else TEXT_MUTED, world=False)
+        draw.text(x + 10, y + 40, title, scale=title_scale, color=TEXT_LIGHT, world=False)
         self._draw_tile_art(draw, x=x, y=y, width=width, height=height, variant=variant)
         draw_play_badge(draw, x=x + 22, y=y + height - 34, active=active)
 
@@ -224,9 +231,10 @@ class LauncherScene:
             style=ACTIVE_CARD if active else IDLE_CARD,
             inset=10,
         )
-        title_scale = fit_scale(draw, title, preferred=4, minimum=2, max_width=width - 104)
-        draw.text(x + 20, y + 52, title, scale=title_scale, color=TEXT_LIGHT, world=False)
-        draw.text(x + 20, y + 24, detail, scale=2, color=ACCENT if active else TEXT_MUTED, world=False)
+        title_scale = fit_scale(draw, title, preferred=3, minimum=2, max_width=width - 80)
+        detail_scale = fit_scale(draw, detail, preferred=2, minimum=1, max_width=width - 80)
+        draw.text(x + 14, y + 52, title, scale=title_scale, color=TEXT_LIGHT, world=False)
+        draw.text(x + 14, y + 26, detail, scale=detail_scale, color=ACCENT if active else TEXT_MUTED, world=False)
         self._draw_action_art(draw, x=x, y=y, variant=variant)
 
     def _draw_tile_art(self, draw: DrawList, *, x: float, y: float, width: float, height: float, variant: str) -> None:

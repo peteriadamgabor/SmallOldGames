@@ -43,10 +43,10 @@ def main() -> int:
             errors.append(f"Missing config: {path}")
 
     # Check for orphaned sprite files (exist on disk but not in atlas)
-    referenced_files = {p.name for p in ALL_SPRITE_PATHS.values()}
-    for xpm_file in SPRITES_DIR.glob("*.xpm"):
-        if xpm_file.name not in referenced_files:
-            errors.append(f"Orphaned sprite (not in atlas): {xpm_file.name}")
+    referenced_files = {p.resolve() for p in ALL_SPRITE_PATHS.values()}
+    for xpm_file in SPRITES_DIR.rglob("*.xpm"):
+        if xpm_file.resolve() not in referenced_files:
+            errors.append(f"Orphaned sprite (not in atlas): {xpm_file.relative_to(SPRITES_DIR)}")
 
     if errors:
         print(f"Asset validation failed with {len(errors)} error(s):")
