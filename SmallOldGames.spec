@@ -3,6 +3,8 @@
 from pathlib import Path
 
 
+import importlib.util
+
 project_root = Path.cwd()
 assets_dir = project_root / "assets"
 branding_dir = assets_dir / "branding"
@@ -14,11 +16,18 @@ datas = [
     (str(assets_dir / "sprites"), "assets/sprites"),
 ]
 
+# Bundle GLFW shared library
+glfw_spec = importlib.util.find_spec("glfw")
+glfw_dir = Path(glfw_spec.origin).parent
+binaries = []
+for dll in glfw_dir.glob("*.dll"):
+    binaries.append((str(dll), "glfw"))
+
 
 a = Analysis(
     ["main.py"],
     pathex=[str(project_root)],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=[],
     hookspath=[],
