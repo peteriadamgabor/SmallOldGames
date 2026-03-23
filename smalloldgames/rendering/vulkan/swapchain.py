@@ -62,6 +62,7 @@ class VulkanSwapchain:
 
     def initialize(self) -> None:
         self._create_swapchain()
+        self.renderer.resource_state.create_frame_resources()
         self.renderer.pipeline_state.create_frame_resources()
         self._create_framebuffers()
         self._create_command_buffers()
@@ -83,7 +84,11 @@ class VulkanSwapchain:
         for framebuffer in self.renderer.framebuffers:
             vkDestroyFramebuffer(self.renderer.device, framebuffer, None)
         self.renderer.framebuffers = []
+        if self.renderer.scene_framebuffer is not None:
+            vkDestroyFramebuffer(self.renderer.device, self.renderer.scene_framebuffer, None)
+            self.renderer.scene_framebuffer = None
         self.renderer.pipeline_state.destroy_frame_resources()
+        self.renderer.resource_state.destroy_frame_resources()
         for image_view in self.renderer.swapchain_image_views:
             vkDestroyImageView(self.renderer.device, image_view, None)
         self.renderer.swapchain_image_views = []
@@ -157,10 +162,22 @@ class VulkanSwapchain:
         )
 
     def _create_framebuffers(self) -> None:
+        self.renderer.scene_framebuffer = vkCreateFramebuffer(
+            self.renderer.device,
+            VkFramebufferCreateInfo(
+                renderPass=self.renderer.scene_render_pass,
+                attachmentCount=1,
+                pAttachments=[self.renderer.offscreen_view],
+                width=self.renderer.swapchain_extent.width,
+                height=self.renderer.swapchain_extent.height,
+                layers=1,
+            ),
+            None,
+        )
         self.renderer.framebuffers = []
         for image_view in self.renderer.swapchain_image_views:
             create_info = VkFramebufferCreateInfo(
-                renderPass=self.renderer.render_pass,
+                renderPass=self.renderer.post_render_pass,
                 attachmentCount=1,
                 pAttachments=[image_view],
                 width=self.renderer.swapchain_extent.width,

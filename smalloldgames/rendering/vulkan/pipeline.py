@@ -13,6 +13,7 @@ from vulkan import (
     VK_BLEND_FACTOR_ONE,
     VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
     VK_BLEND_FACTOR_SRC_ALPHA,
+    VK_BLEND_FACTOR_ZERO,
     VK_BLEND_OP_ADD,
     VK_COLOR_COMPONENT_A_BIT,
     VK_COLOR_COMPONENT_B_BIT,
@@ -26,6 +27,7 @@ from vulkan import (
     VK_FRONT_FACE_COUNTER_CLOCKWISE,
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     VK_IMAGE_LAYOUT_UNDEFINED,
     VK_PIPELINE_BIND_POINT_GRAPHICS,
     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
@@ -110,19 +112,30 @@ class VulkanPipeline:
         self.renderer.descriptor_set_layout = vkCreateDescriptorSetLayout(self.renderer.device, create_info, None)
 
     def create_frame_resources(self) -> None:
-        self._create_render_pass()
-        self._create_pipeline()
+        self._create_scene_render_pass()
+        self._create_post_render_pass()
+        self._create_scene_pipeline()
+        self._create_post_pipeline()
 
     def destroy_frame_resources(self) -> None:
-        if self.renderer.pipeline is not None:
-            vkDestroyPipeline(self.renderer.device, self.renderer.pipeline, None)
-            self.renderer.pipeline = None
-        if self.renderer.pipeline_layout is not None:
-            vkDestroyPipelineLayout(self.renderer.device, self.renderer.pipeline_layout, None)
-            self.renderer.pipeline_layout = None
-        if self.renderer.render_pass is not None:
-            vkDestroyRenderPass(self.renderer.device, self.renderer.render_pass, None)
-            self.renderer.render_pass = None
+        if self.renderer.scene_pipeline is not None:
+            vkDestroyPipeline(self.renderer.device, self.renderer.scene_pipeline, None)
+            self.renderer.scene_pipeline = None
+        if self.renderer.post_pipeline is not None:
+            vkDestroyPipeline(self.renderer.device, self.renderer.post_pipeline, None)
+            self.renderer.post_pipeline = None
+        if self.renderer.scene_pipeline_layout is not None:
+            vkDestroyPipelineLayout(self.renderer.device, self.renderer.scene_pipeline_layout, None)
+            self.renderer.scene_pipeline_layout = None
+        if self.renderer.post_pipeline_layout is not None:
+            vkDestroyPipelineLayout(self.renderer.device, self.renderer.post_pipeline_layout, None)
+            self.renderer.post_pipeline_layout = None
+        if self.renderer.scene_render_pass is not None:
+            vkDestroyRenderPass(self.renderer.device, self.renderer.scene_render_pass, None)
+            self.renderer.scene_render_pass = None
+        if self.renderer.post_render_pass is not None:
+            vkDestroyRenderPass(self.renderer.device, self.renderer.post_render_pass, None)
+            self.renderer.post_render_pass = None
 
     def close(self) -> None:
         if self.renderer.device is not None and self.renderer.descriptor_set_layout is not None:
@@ -138,19 +151,19 @@ class VulkanPipeline:
             )
 
         clear_value = VkClearValue(color=VkClearColorValue(float32=CLEAR_COLOR))
-        render_pass_begin = VkRenderPassBeginInfo(
-            renderPass=self.renderer.render_pass,
-            framebuffer=self.renderer.framebuffers[image_index],
+        scene_render_pass_begin = VkRenderPassBeginInfo(
+            renderPass=self.renderer.scene_render_pass,
+            framebuffer=self.renderer.scene_framebuffer,
             renderArea=VkRect2D(offset=VkOffset2D(x=0, y=0), extent=self.renderer.swapchain_extent),
             clearValueCount=1,
             pClearValues=[clear_value],
         )
-        vkCmdBeginRenderPass(command_buffer, render_pass_begin, VK_SUBPASS_CONTENTS_INLINE)
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, self.renderer.pipeline)
+        vkCmdBeginRenderPass(command_buffer, scene_render_pass_begin, VK_SUBPASS_CONTENTS_INLINE)
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, self.renderer.scene_pipeline)
         vkCmdBindDescriptorSets(
             command_buffer,
             VK_PIPELINE_BIND_POINT_GRAPHICS,
-            self.renderer.pipeline_layout,
+            self.renderer.scene_pipeline_layout,
             0,
             1,
             [self.renderer.descriptor_set],
@@ -161,6 +174,28 @@ class VulkanPipeline:
         if vertex_count:
             vkCmdDraw(command_buffer, vertex_count, 1, 0, 0)
         vkCmdEndRenderPass(command_buffer)
+
+        post_render_pass_begin = VkRenderPassBeginInfo(
+            renderPass=self.renderer.post_render_pass,
+            framebuffer=self.renderer.framebuffers[image_index],
+            renderArea=VkRect2D(offset=VkOffset2D(x=0, y=0), extent=self.renderer.swapchain_extent),
+            clearValueCount=1,
+            pClearValues=[clear_value],
+        )
+        vkCmdBeginRenderPass(command_buffer, post_render_pass_begin, VK_SUBPASS_CONTENTS_INLINE)
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, self.renderer.post_pipeline)
+        vkCmdBindDescriptorSets(
+            command_buffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            self.renderer.post_pipeline_layout,
+            0,
+            1,
+            [self.renderer.post_descriptor_set],
+            0,
+            None,
+        )
+        vkCmdDraw(command_buffer, 3, 1, 0, 0)
+        vkCmdEndRenderPass(command_buffer)
         if self.renderer.gpu_timing_query_pool is not None:
             vkCmdWriteTimestamp(
                 command_buffer,
@@ -170,7 +205,44 @@ class VulkanPipeline:
             )
         vkEndCommandBuffer(command_buffer)
 
-    def _create_render_pass(self) -> None:
+    def _create_scene_render_pass(self) -> None:
+        attachment = VkAttachmentDescription(
+            format=self.renderer.swapchain_format,
+            samples=VK_SAMPLE_COUNT_1_BIT,
+            loadOp=VK_ATTACHMENT_LOAD_OP_CLEAR,
+            storeOp=VK_ATTACHMENT_STORE_OP_STORE,
+            stencilLoadOp=VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            stencilStoreOp=VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
+            finalLayout=VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        )
+        color_attachment_ref = VkAttachmentReference(
+            attachment=0,
+            layout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        )
+        subpass = VkSubpassDescription(
+            pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS,
+            colorAttachmentCount=1,
+            pColorAttachments=[color_attachment_ref],
+        )
+        dependency = VkSubpassDependency(
+            srcSubpass=VK_SUBPASS_EXTERNAL,
+            dstSubpass=0,
+            srcStageMask=VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            dstStageMask=VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            dstAccessMask=VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        )
+        create_info = VkRenderPassCreateInfo(
+            attachmentCount=1,
+            pAttachments=[attachment],
+            subpassCount=1,
+            pSubpasses=[subpass],
+            dependencyCount=1,
+            pDependencies=[dependency],
+        )
+        self.renderer.scene_render_pass = vkCreateRenderPass(self.renderer.device, create_info, None)
+
+    def _create_post_render_pass(self) -> None:
         attachment = VkAttachmentDescription(
             format=self.renderer.swapchain_format,
             samples=VK_SAMPLE_COUNT_1_BIT,
@@ -205,10 +277,10 @@ class VulkanPipeline:
             dependencyCount=1,
             pDependencies=[dependency],
         )
-        self.renderer.render_pass = vkCreateRenderPass(self.renderer.device, create_info, None)
+        self.renderer.post_render_pass = vkCreateRenderPass(self.renderer.device, create_info, None)
 
-    def _create_pipeline(self) -> None:
-        self.renderer.pipeline_layout = vkCreatePipelineLayout(
+    def _create_scene_pipeline(self) -> None:
+        self.renderer.scene_pipeline_layout = vkCreatePipelineLayout(
             self.renderer.device,
             VkPipelineLayoutCreateInfo(
                 setLayoutCount=1,
@@ -303,11 +375,100 @@ class VulkanPipeline:
                 pRasterizationState=rasterizer,
                 pMultisampleState=multisampling,
                 pColorBlendState=blending,
-                layout=self.renderer.pipeline_layout,
-                renderPass=self.renderer.render_pass,
+                layout=self.renderer.scene_pipeline_layout,
+                renderPass=self.renderer.scene_render_pass,
                 subpass=0,
             )
-            self.renderer.pipeline = vkCreateGraphicsPipelines(self.renderer.device, None, 1, [pipeline_info], None)[0]
+            self.renderer.scene_pipeline = vkCreateGraphicsPipelines(
+                self.renderer.device, None, 1, [pipeline_info], None
+            )[0]
+        finally:
+            vkDestroyShaderModule(self.renderer.device, vert_module, None)
+            vkDestroyShaderModule(self.renderer.device, frag_module, None)
+
+    def _create_post_pipeline(self) -> None:
+        self.renderer.post_pipeline_layout = vkCreatePipelineLayout(
+            self.renderer.device,
+            VkPipelineLayoutCreateInfo(
+                setLayoutCount=1,
+                pSetLayouts=[self.renderer.descriptor_set_layout],
+            ),
+            None,
+        )
+
+        vert_module = self._create_shader_module(self.renderer.shader_dir / "post.vert.spv")
+        frag_module = self._create_shader_module(self.renderer.shader_dir / "post.frag.spv")
+        try:
+            stages = [
+                VkPipelineShaderStageCreateInfo(stage=VK_SHADER_STAGE_VERTEX_BIT, module=vert_module, pName=b"main"),
+                VkPipelineShaderStageCreateInfo(stage=VK_SHADER_STAGE_FRAGMENT_BIT, module=frag_module, pName=b"main"),
+            ]
+            vertex_input = VkPipelineVertexInputStateCreateInfo(
+                vertexBindingDescriptionCount=0,
+                pVertexBindingDescriptions=None,
+                vertexAttributeDescriptionCount=0,
+                pVertexAttributeDescriptions=None,
+            )
+            input_assembly = VkPipelineInputAssemblyStateCreateInfo(
+                topology=VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+                primitiveRestartEnable=False,
+            )
+            viewport, scissor = self._full_viewport()
+            viewport_state = VkPipelineViewportStateCreateInfo(
+                viewportCount=1,
+                pViewports=[viewport],
+                scissorCount=1,
+                pScissors=[scissor],
+            )
+            rasterizer = VkPipelineRasterizationStateCreateInfo(
+                depthClampEnable=False,
+                rasterizerDiscardEnable=False,
+                polygonMode=VK_POLYGON_MODE_FILL,
+                cullMode=VK_CULL_MODE_NONE,
+                frontFace=VK_FRONT_FACE_COUNTER_CLOCKWISE,
+                depthBiasEnable=False,
+                lineWidth=1.0,
+            )
+            multisampling = VkPipelineMultisampleStateCreateInfo(
+                rasterizationSamples=VK_SAMPLE_COUNT_1_BIT,
+                sampleShadingEnable=False,
+            )
+            blend_attachment = VkPipelineColorBlendAttachmentState(
+                blendEnable=False,
+                srcColorBlendFactor=VK_BLEND_FACTOR_ONE,
+                dstColorBlendFactor=VK_BLEND_FACTOR_ZERO,
+                colorBlendOp=VK_BLEND_OP_ADD,
+                srcAlphaBlendFactor=VK_BLEND_FACTOR_ONE,
+                dstAlphaBlendFactor=VK_BLEND_FACTOR_ZERO,
+                alphaBlendOp=VK_BLEND_OP_ADD,
+                colorWriteMask=(
+                    VK_COLOR_COMPONENT_R_BIT
+                    | VK_COLOR_COMPONENT_G_BIT
+                    | VK_COLOR_COMPONENT_B_BIT
+                    | VK_COLOR_COMPONENT_A_BIT
+                ),
+            )
+            blending = VkPipelineColorBlendStateCreateInfo(
+                logicOpEnable=False,
+                attachmentCount=1,
+                pAttachments=[blend_attachment],
+            )
+            pipeline_info = VkGraphicsPipelineCreateInfo(
+                stageCount=len(stages),
+                pStages=stages,
+                pVertexInputState=vertex_input,
+                pInputAssemblyState=input_assembly,
+                pViewportState=viewport_state,
+                pRasterizationState=rasterizer,
+                pMultisampleState=multisampling,
+                pColorBlendState=blending,
+                layout=self.renderer.post_pipeline_layout,
+                renderPass=self.renderer.post_render_pass,
+                subpass=0,
+            )
+            self.renderer.post_pipeline = vkCreateGraphicsPipelines(
+                self.renderer.device, None, 1, [pipeline_info], None
+            )[0]
         finally:
             vkDestroyShaderModule(self.renderer.device, vert_module, None)
             vkDestroyShaderModule(self.renderer.device, frag_module, None)
@@ -344,3 +505,18 @@ class VulkanPipeline:
             float(int(viewport_height)),
             scissor,
         )
+
+    def _full_viewport(self) -> tuple[VkViewport, VkRect2D]:
+        viewport = VkViewport(
+            x=0.0,
+            y=float(self.renderer.swapchain_extent.height),
+            width=float(self.renderer.swapchain_extent.width),
+            height=-float(self.renderer.swapchain_extent.height),
+            minDepth=0.0,
+            maxDepth=1.0,
+        )
+        scissor = VkRect2D(
+            offset=VkOffset2D(x=0, y=0),
+            extent=self.renderer.swapchain_extent,
+        )
+        return viewport, scissor
