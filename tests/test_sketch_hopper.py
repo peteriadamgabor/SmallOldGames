@@ -9,6 +9,7 @@ from tempfile import TemporaryDirectory
 import glfw
 
 from smalloldgames.data.storage import ScoreRepository
+from smalloldgames.engine import SceneContext
 from smalloldgames.engine.input import InputState
 from smalloldgames.games.sketch_hopper import BlackHole, Monster, Pickup, Projectile, SketchHopperScene
 
@@ -380,7 +381,7 @@ class SketchHopperTests(unittest.TestCase):
     def test_pause_menu_can_toggle_sound_setting(self) -> None:
         with TemporaryDirectory() as temp_dir:
             repository = ScoreRepository(Path(temp_dir) / "scores.sqlite3")
-            scene = SketchHopperScene(lambda: None, score_repository=repository, seed=7)
+            scene = SketchHopperScene(lambda: None, ctx=SceneContext(score_repository=repository), seed=7)
             scene.paused = True
             scene.sound_enabled = True
             inputs = InputState()
@@ -447,6 +448,37 @@ class SketchHopperTests(unittest.TestCase):
         self.assertEqual(len(scene.monsters), 0)
         self.assertEqual(len(scene.projectiles), 0)
 
+    def test_projectiles_can_defeat_multiple_monsters_in_same_spatial_bucket(self) -> None:
+        scene = self.make_scene()
+        scene.monsters = []
+        scene.projectiles = []
+        first = Monster(
+            x=96.0,
+            y=420.0,
+            width=scene.monster_width,
+            height=scene.monster_height,
+            velocity_x=0.0,
+            score_value=15,
+        )
+        second = Monster(
+            x=118.0,
+            y=452.0,
+            width=scene.monster_width,
+            height=scene.monster_height,
+            velocity_x=0.0,
+            score_value=25,
+        )
+        scene.monsters.append(first)
+        scene.monsters.append(second)
+        scene.projectiles.append(Projectile(x=112.0, y=424.0, width=8.0, height=18.0, velocity_y=0.0))
+        scene.projectiles.append(Projectile(x=134.0, y=456.0, width=8.0, height=18.0, velocity_y=0.0))
+
+        scene._tick_projectiles(0.0)
+
+        self.assertEqual(len(scene.monsters), 0)
+        self.assertEqual(len(scene.projectiles), 0)
+        self.assertEqual(scene.score, 40)
+
     def test_player_shot_stays_faster_than_upward_player_motion(self) -> None:
         scene = self.make_scene()
         scene.player.velocity_y = scene.jetpack_velocity
@@ -473,7 +505,7 @@ class SketchHopperTests(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             repository = ScoreRepository(Path(temp_dir) / "scores.sqlite3")
             repository.set_player_name("rocket")
-            scene = SketchHopperScene(lambda: None, score_repository=repository, seed=7)
+            scene = SketchHopperScene(lambda: None, ctx=SceneContext(score_repository=repository), seed=7)
             scene.score = 321
             scene.player.y = scene.camera_y - scene.player.height - 200.0
             scene.player.velocity_y = -200.0

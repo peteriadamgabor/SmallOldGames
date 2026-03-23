@@ -19,6 +19,7 @@ dev = [
 
 [project.scripts]
 smalloldgames = "smalloldgames.engine.app:main"
+smalloldgames-benchmark = "smalloldgames.benchmark:main"
 
 [tool.ruff]
 target-version = "py313"

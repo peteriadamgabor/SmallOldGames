@@ -96,20 +96,23 @@ class AudioEngine:
             return
         if self._player is None:
             return
-        self._reap_effects()
-        if len(self._active_effects) >= _MAX_ACTIVE_EFFECTS:
-            return
+        with self._music_lock:
+            self._reap_effects()
+            if len(self._active_effects) >= _MAX_ACTIVE_EFFECTS:
+                return
         command = [*self._player, str(sound_path)]
         try:
             process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except OSError:
             return
-        self._active_effects.append(process)
+        with self._music_lock:
+            self._active_effects.append(process)
 
     def play_music(self, track_name: str | None) -> None:
-        self._requested_music = track_name
-        if track_name == self._current_music:
-            return
+        with self._music_lock:
+            self._requested_music = track_name
+            if track_name == self._current_music:
+                return
         self.stop_music()
         if not self.enabled or track_name is None:
             return
@@ -117,7 +120,8 @@ class AudioEngine:
         if segments is None:
             return
         music_path = self._ensure_music(track_name, segments)
-        self._current_music = track_name
+        with self._music_lock:
+            self._current_music = track_name
         if self._winsound is not None:
             flags = (
                 self._winsound.SND_FILENAME
@@ -134,7 +138,8 @@ class AudioEngine:
         self._music_thread.start()
 
     def stop_music(self) -> None:
-        self._current_music = None
+        with self._music_lock:
+            self._current_music = None
         if self._winsound is not None:
             self._winsound.PlaySound(None, 0)
         self._music_stop.set()
@@ -160,8 +165,11 @@ class AudioEngine:
         if not enabled:
             self.stop_music()
             self._stop_effects()
-        elif self._requested_music is not None:
-            self.play_music(self._requested_music)
+        else:
+            with self._music_lock:
+                requested = self._requested_music
+            if requested is not None:
+                self.play_music(requested)
 
     @staticmethod
     def _load_winsound():
@@ -202,7 +210,9 @@ class AudioEngine:
         self._active_effects = [process for process in self._active_effects if process.poll() is None]
 
     def _stop_effects(self) -> None:
-        for process in self._active_effects:
+        with self._music_lock:
+            effects = list(self._active_effects)
+        for process in effects:
             if process.poll() is None:
                 try:
                     process.terminate()
@@ -211,7 +221,8 @@ class AudioEngine:
                     pass
                 except OSError:
                     pass
-        self._reap_effects()
+        with self._music_lock:
+            self._reap_effects()
 
     def _ensure_effect(self, effect_name: str, segments: tuple[tuple[float, float, float], ...]) -> Path:
         sound_path = self._effects_dir / f"{effect_name}.wav"

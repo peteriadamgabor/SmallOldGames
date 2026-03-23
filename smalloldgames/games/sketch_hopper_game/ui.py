@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import glfw
 
-from smalloldgames.engine import InputState, Scene
+from smalloldgames.engine import GameAction, InputState, Scene, SceneResult, Transition
 
 from .config import (
     load_sketch_hopper_config,
@@ -16,7 +16,7 @@ from .shared import BALANCE_FIELDS
 
 class SketchHopperUIMixin:
     def _control_move_axis(self, inputs: InputState) -> float:
-        keyboard_axis = inputs.axis((glfw.KEY_LEFT, glfw.KEY_A), (glfw.KEY_RIGHT, glfw.KEY_D))
+        keyboard_axis = inputs.action_axis(GameAction.MOVE_LEFT, GameAction.MOVE_RIGHT)
         if not self.touch_controls_enabled or not inputs.pointer_down:
             return keyboard_axis
         if inputs.pointer_in_rect(*self._left_touch_rect()):
@@ -37,19 +37,19 @@ class SketchHopperUIMixin:
             and inputs.pointer_in_rect(*self._pause_button_rect())
         )
 
-    def _update_pause_menu(self, inputs: InputState) -> Scene | None:
+    def _update_pause_menu(self, inputs: InputState) -> SceneResult:
         if self.pause_page == "balance":
             return self._update_balance_editor(inputs)
-        if inputs.was_pressed(glfw.KEY_ENTER, glfw.KEY_P):
+        if inputs.action_pressed(GameAction.CONFIRM, GameAction.PAUSE):
             self.paused = False
             return None
-        if inputs.was_pressed(glfw.KEY_B):
+        if inputs.action_pressed(GameAction.BALANCE):
             self.pause_page = "balance"
             return None
-        if inputs.was_pressed(glfw.KEY_S):
+        if inputs.action_pressed(GameAction.SOUND_TOGGLE):
             self._set_sound_enabled(not self.sound_enabled)
             return None
-        if inputs.was_pressed(glfw.KEY_T):
+        if inputs.action_pressed(GameAction.TOUCH_TOGGLE):
             self._set_touch_controls_enabled(not self.touch_controls_enabled)
             return None
         if inputs.pointer_pressed:
@@ -72,32 +72,32 @@ class SketchHopperUIMixin:
                 self.pause_page = "balance"
                 return None
             if inputs.pointer_in_rect(*self._pause_exit_rect()):
-                return self.on_exit()
+                return Transition(self.on_exit())
         return None
 
-    def _update_balance_editor(self, inputs: InputState) -> Scene | None:
-        if inputs.was_pressed(glfw.KEY_ESCAPE, glfw.KEY_B):
+    def _update_balance_editor(self, inputs: InputState) -> SceneResult:
+        if inputs.was_pressed(glfw.KEY_ESCAPE) or inputs.action_pressed(GameAction.BALANCE):
             self.pause_page = "settings"
             self.confirm_reset_defaults = False
             return None
-        if inputs.was_pressed(glfw.KEY_UP):
+        if inputs.action_pressed(GameAction.NAV_UP):
             self.balance_index = (self.balance_index - 1) % len(BALANCE_FIELDS)
             return None
-        if inputs.was_pressed(glfw.KEY_DOWN):
+        if inputs.action_pressed(GameAction.NAV_DOWN):
             self.balance_index = (self.balance_index + 1) % len(BALANCE_FIELDS)
             return None
-        if inputs.was_pressed(glfw.KEY_LEFT):
+        if inputs.action_pressed(GameAction.NAV_LEFT):
             self._adjust_balance(-1)
             return None
-        if inputs.was_pressed(glfw.KEY_RIGHT):
+        if inputs.action_pressed(GameAction.NAV_RIGHT):
             self._adjust_balance(1)
             return None
-        if inputs.was_pressed(glfw.KEY_F5):
+        if inputs.action_pressed(GameAction.SAVE_CONFIG):
             save_sketch_hopper_config(self.config)
             self._trigger_feedback("BALANCE SAVED", (0.54, 0.86, 0.53, 0.92))
             self.confirm_reset_defaults = False
             return None
-        if inputs.was_pressed(glfw.KEY_F9):
+        if inputs.action_pressed(GameAction.LOAD_CONFIG):
             self.config = load_sketch_hopper_config()
             self._apply_config()
             self._trigger_feedback("BALANCE RELOADED", (0.58, 0.80, 1.0, 0.92))
@@ -168,14 +168,14 @@ class SketchHopperUIMixin:
         self.confirm_reset_defaults = False
         self._trigger_feedback("BALANCE RESET", (0.96, 0.78, 0.34, 0.92))
 
-    def _update_game_over_touch(self, inputs: InputState) -> Scene | None:
+    def _update_game_over_touch(self, inputs: InputState) -> SceneResult:
         if not self.touch_controls_enabled or not inputs.pointer_pressed:
             return None
         if inputs.pointer_in_rect(*self._game_over_retry_rect()):
             self.reset()
             return None
         if inputs.pointer_in_rect(*self._game_over_exit_rect()):
-            return self.on_exit()
+            return Transition(self.on_exit())
         return None
 
     @staticmethod

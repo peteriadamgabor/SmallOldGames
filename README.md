@@ -2,7 +2,7 @@
 
 Retro mobile game remakes in Python with a Vulkan renderer.
 
-The first implemented game is `Sketch Hopper`, an endless vertical jumper inspired by early phone games. The long-term goal is a small collection of old mobile-style remakes running from one launcher.
+The launcher now includes `Sketch Hopper`, `Snake Classic`, `Space Invaders`, and an automated benchmark scene. The long-term goal is still a small collection of old mobile-style remakes running from one launcher.
 
 Repository automation:
 
@@ -14,14 +14,16 @@ Repository automation:
 - Launcher with game selection and local leaderboard entry point
 - Resizable desktop window with portrait-content scaling
 - Vulkan-backed 2D renderer
-- Playable `Sketch Hopper`
+- Playable `Sketch Hopper`, `Snake Classic`, and `Space Invaders`
+- Automated benchmark game with staged stress scenes
+- Headless benchmark CLI for agent/CI-style runs
 - Procedural platform generation
 - Moving, broken, fake, vanish, spring, and trampoline platforms
 - Monsters, UFOs, projectiles, hazards, and pickups
 - Local SQLite scoreboard
 - Balance config file for gameplay tuning
 - Automated unit tests for core gameplay and engine behavior
-- Debug overlay with FPS counter (toggle with F3)
+- Debug/profiling overlay with graph (toggle with F3)
 
 ## Contributing
 
@@ -45,8 +47,8 @@ Distribution options now included in the repo:
 Not finished yet:
 
 - Android packaging and touch-native deployment
-- Multiple completed games in the launcher
 - Full production art/audio polish
+- Real-time audio backend replacement for subprocess playback
 
 ## Requirements
 
@@ -65,6 +67,7 @@ Important:
 
 - This project will not run from a headless shell or CI runner without graphics.
 - If Vulkan is not working on your machine, the game will not start.
+- The headless benchmark CLI is the exception: it can run without a graphical desktop session.
 
 ## Setup
 
@@ -174,6 +177,28 @@ uv run python main.py
 uv run python -m smalloldgames.engine.app
 ```
 
+Benchmark entry points:
+
+```bash
+uv run python -m smalloldgames.benchmark
+```
+
+```bash
+uv run smalloldgames-benchmark
+```
+
+Interactive GPU benchmark:
+
+```bash
+uv run smalloldgames --benchmark --benchmark-output /tmp/benchmark.json
+```
+
+Headless CPU-side benchmark:
+
+```bash
+uv run python -m smalloldgames.benchmark --benchmark-output /tmp/benchmark.json
+```
+
 Windows PowerShell example:
 
 ```powershell
@@ -261,6 +286,8 @@ For distribution, share the generated `.tar.gz` archive or the full `dist/SmallO
 
 - `Up` / `W`: move selection up
 - `Down` / `S`: move selection down
+- `Left` / `A`: move selection left
+- `Right` / `D`: move selection right
 - `Enter` / `Space`: open selected item
 - Mouse: click cards and buttons
 
@@ -271,10 +298,32 @@ For distribution, share the generated `.tar.gz` archive or the full `dist/SmallO
 - `Space`: shoot
 - `P`: pause
 - `R`: restart run
-- `F3`: toggle debug overlay (FPS counter)
+- `F3`: toggle debug/profiling overlay
 - `Esc`: return to launcher
 - `Q`: quit application
 - Mouse/touch-style UI: menu buttons, pause button, on-screen controls
+
+### Snake Classic
+
+- `Arrow keys` / `WASD`: move
+- `P`: pause
+- `R`: restart
+- `Esc`: return to launcher
+
+### Space Invaders
+
+- `Left` / `A`: move left
+- `Right` / `D`: move right
+- `Space`: fire
+- `P`: pause
+- `R`: restart
+- `Esc`: return to launcher
+
+### Benchmark
+
+- Runs automatically through 4 staged stress scenes
+- `Esc`: save partial result and leave benchmark
+- `Enter`: rerun after completion
 
 ## Quick Start
 
@@ -299,6 +348,7 @@ The project stores local runtime data outside the repository:
 
 - scoreboard database: `~/.smalloldgames/scoreboard.sqlite3`
 - local balance override: `~/.smalloldgames/sketch_hopper.toml`
+- benchmark results: `~/.smalloldgames/benchmarks/benchmark_latest.json` plus timestamped archives
 
 That means your checked-in project files stay clean while scores and local tuning remain persistent.
 

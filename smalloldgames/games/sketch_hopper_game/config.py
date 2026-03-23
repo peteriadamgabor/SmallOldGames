@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import tomllib
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import get_type_hints
+
+_log = logging.getLogger(__name__)
 
 from smalloldgames.assets import CONFIG_DIR
 
@@ -176,6 +179,38 @@ class SketchHopperConfig:
     effect_flash_duration: float = 0.18
     effect_flash_alpha: float = 0.16
     shake_decay: float = 4.6
+
+
+def validate_config(config: SketchHopperConfig) -> list[str]:
+    """Return a list of validation error messages. Empty list means valid."""
+    errors: list[str] = []
+    for field in fields(config):
+        value = getattr(config, field.name)
+        if field.name.endswith(("_width", "_height", "_size")) and isinstance(value, (int, float)) and value <= 0:
+            errors.append(f"{field.name} must be positive, got {value}")
+        if field.name.endswith(("_duration", "_cooldown", "_interval_min", "_interval_max")) and isinstance(value, (int, float)) and value <= 0:
+            errors.append(f"{field.name} must be positive, got {value}")
+        if field.name.endswith("_chance") and isinstance(value, float) and not (0.0 <= value <= 1.0):
+            errors.append(f"{field.name} must be between 0 and 1, got {value}")
+        if field.name.endswith("_charges") and isinstance(value, int) and value < 0:
+            errors.append(f"{field.name} must be non-negative, got {value}")
+    if config.gravity >= 0:
+        errors.append(f"gravity must be negative, got {config.gravity}")
+    if config.jump_velocity <= 0:
+        errors.append(f"jump_velocity must be positive, got {config.jump_velocity}")
+    if config.move_speed <= 0:
+        errors.append(f"move_speed must be positive, got {config.move_speed}")
+    if config.platform_spawn_gap_min > config.platform_spawn_gap_max:
+        errors.append(
+            f"platform_spawn_gap_min ({config.platform_spawn_gap_min}) "
+            f"must not exceed platform_spawn_gap_max ({config.platform_spawn_gap_max})"
+        )
+    if config.monster_spawn_gap_min > config.monster_spawn_gap_max:
+        errors.append(
+            f"monster_spawn_gap_min ({config.monster_spawn_gap_min}) "
+            f"must not exceed monster_spawn_gap_max ({config.monster_spawn_gap_max})"
+        )
+    return errors
 
 
 SECTIONS: dict[str, tuple[str, ...]] = {
@@ -371,6 +406,9 @@ def load_sketch_hopper_config(
         config = _merge_file(config, user_path)
     elif override_path is not None:
         config = _merge_file(config, Path(override_path))
+    errors = validate_config(config)
+    for error in errors:
+        _log.warning("Config validation: %s", error)
     return config
 
 

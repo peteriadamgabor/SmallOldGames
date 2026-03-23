@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from smalloldgames.engine import ComponentListProxy, World
+from smalloldgames.engine import ComponentListProxy, System, World, run_systems
 from smalloldgames.games.sketch_hopper import BlackHole, Cloud, ImpactEffect, Monster, Pickup, SketchHopperScene
 
 
@@ -67,6 +67,21 @@ class WorldTests(unittest.TestCase):
         self.assertEqual(len(list(scene.dynamic_world.query(Monster))), initial_monsters + 1)
         self.assertEqual(len(list(scene.dynamic_world.query(Pickup))), initial_pickups + 1)
         self.assertEqual(len(list(scene.dynamic_world.query(BlackHole))), initial_black_holes + 1)
+
+    def test_run_systems_applies_formal_system_protocol(self) -> None:
+        world = World()
+        calls: list[float] = []
+
+        class DummySystem:
+            def update(self, world: World, dt: float) -> None:
+                world.create(("tick", dt))
+                calls.append(dt)
+
+        systems: list[System] = [DummySystem()]
+        run_systems(world, systems, 0.25)
+
+        self.assertEqual(calls, [0.25])
+        self.assertEqual(len(list(world.query(tuple))), 1)
 
 
 if __name__ == "__main__":
