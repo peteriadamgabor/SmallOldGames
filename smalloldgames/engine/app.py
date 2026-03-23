@@ -9,6 +9,7 @@ from smalloldgames.assets import SHADERS_DIR, font_glyphs_from_atlas, COMBINED_A
 from smalloldgames.data.storage import ScoreRepository
 from smalloldgames.games.sketch_hopper import SketchHopperScene
 from smalloldgames.games.snake import SnakeScene
+from smalloldgames.games.space_invaders import SpaceInvadersScene
 from smalloldgames.menus import LeaderboardScene, LauncherScene, SettingsScene
 from smalloldgames.rendering.primitives import DrawList
 from smalloldgames.rendering.vulkan_renderer import VulkanRenderer
@@ -94,6 +95,16 @@ class App:
                         art_variant="snake",
                         music_track="launcher",
                         make_scene=self._make_snake,
+                    ),
+                    GameDefinition(
+                        id="space_invaders",
+                        title="SPACE INVADERS",
+                        subtitle="ALIEN ONSLAUGHT",
+                        detail="PRESS ENTER OR SPACE",
+                        score_key="space_invaders",
+                        art_variant="space_invaders",
+                        music_track="space_invaders",
+                        make_scene=self._make_space_invaders,
                     ),
                 )
             )
@@ -186,6 +197,9 @@ class App:
 
     def _make_snake(self) -> SnakeScene:
         return SnakeScene(self._make_launcher, score_repository=self.score_repository, audio=self.audio)
+
+    def _make_space_invaders(self) -> SpaceInvadersScene:
+        return SpaceInvadersScene(self._make_launcher, score_repository=self.score_repository, audio=self.audio)
 
     def _make_launcher(self) -> LauncherScene:
         return LauncherScene(

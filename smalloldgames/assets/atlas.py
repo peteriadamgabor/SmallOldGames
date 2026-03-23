@@ -28,11 +28,19 @@ SNAKE_SPRITE_PATHS = {
     "food": SPRITES_DIR / "food.xpm",
 }
 
+SPACE_INVADERS_SPRITE_PATHS = {
+    "cannon": SPRITES_DIR / "cannon.xpm",
+    "invader_a": SPRITES_DIR / "invader_a.xpm",
+    "invader_b": SPRITES_DIR / "invader_b.xpm",
+    "invader_c": SPRITES_DIR / "invader_c.xpm",
+}
+
 # Combine all unique sprite paths
-ALL_SPRITE_PATHS = {**SKETCH_HOPPER_SPRITE_PATHS, **SNAKE_SPRITE_PATHS}
+ALL_SPRITE_PATHS = {**SKETCH_HOPPER_SPRITE_PATHS, **SNAKE_SPRITE_PATHS, **SPACE_INVADERS_SPRITE_PATHS}
 
 COMBINED_ATLAS = build_sprite_atlas({name: load_xpm(path) for name, path in ALL_SPRITE_PATHS.items()})
 
 # Legacy exports for individual games if they still need their own limited views
 SKETCH_HOPPER_ATLAS = COMBINED_ATLAS
 SNAKE_ATLAS = COMBINED_ATLAS
+SPACE_INVADERS_ATLAS = COMBINED_ATLAS

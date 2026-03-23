@@ -27,6 +27,10 @@ PLATFORM_MOVING_SPRITE = COMBINED_ATLAS.sprites["platform_moving"]
 SNAKE_HEAD_SPRITE = COMBINED_ATLAS.sprites.get("snake_head")
 SNAKE_BODY_SPRITE = COMBINED_ATLAS.sprites.get("snake_body")
 FOOD_SPRITE = COMBINED_ATLAS.sprites.get("food")
+CANNON_SPRITE = COMBINED_ATLAS.sprites.get("cannon")
+INVADER_A_SPRITE = COMBINED_ATLAS.sprites.get("invader_a")
+INVADER_B_SPRITE = COMBINED_ATLAS.sprites.get("invader_b")
+INVADER_C_SPRITE = COMBINED_ATLAS.sprites.get("invader_c")
 
 
 def fit_scale(draw: DrawList, text: str, *, preferred: int, minimum: int, max_width: float) -> int:
