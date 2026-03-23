@@ -7,12 +7,12 @@ import glfw
 
 from smalloldgames.data.storage import ScoreRepository
 from smalloldgames.engine import GameRegistry, InputState, SceneContext
+from smalloldgames.engine.scene import Transition
 from smalloldgames.games import DEFAULT_GAME_MODULES
+from smalloldgames.games.snake import SnakeScene
 from smalloldgames.menus.home import LauncherScene
 from smalloldgames.menus.leaderboard import LeaderboardScene
 from smalloldgames.menus.settings import SettingsScene
-from smalloldgames.games.snake import SnakeScene
-from smalloldgames.engine.scene import Transition
 
 
 class _FakeAudio:

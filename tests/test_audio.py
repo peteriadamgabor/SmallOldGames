@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from smalloldgames.engine.audio import AudioEngine, _MAX_ACTIVE_EFFECTS, synthesize_music_pcm, synthesize_pcm
+from smalloldgames.engine.audio import _MAX_ACTIVE_EFFECTS, AudioEngine, synthesize_music_pcm, synthesize_pcm
 
 
 class _FakeProcess:

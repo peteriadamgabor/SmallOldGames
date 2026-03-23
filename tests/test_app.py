@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+import unittest
 from array import array
 from types import SimpleNamespace
-import unittest
 from unittest.mock import Mock, patch
 
+from smalloldgames.engine.app import (
+    WINDOW_HEIGHT,
+    WINDOW_WIDTH,
+    App,
+    RuntimeLoop,
+    _content_rect,
+    _parse_args,
+    _resolve_database_path,
+)
 from smalloldgames.engine.debug_overlay import FrameProfile
-from smalloldgames.engine.app import WINDOW_HEIGHT, WINDOW_WIDTH, App, RuntimeLoop, _content_rect, _parse_args, _resolve_database_path
 from smalloldgames.engine.scene import Pop, Push, Transition
 
 

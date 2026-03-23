@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import unittest
 from array import array
 from types import SimpleNamespace
-import unittest
 from unittest.mock import Mock, patch
 
 from smalloldgames.rendering import vulkan_renderer
@@ -83,7 +83,16 @@ class VulkanRendererTests(unittest.TestCase):
 
         with (
             patch("smalloldgames.rendering.vulkan_renderer.glfw.get_framebuffer_size", return_value=(640, 480)),
-            patch.object(vulkan_renderer, "ffi", SimpleNamespace(memmove=Mock(), from_buffer=lambda data: data, new=vulkan_renderer.ffi.new, sizeof=vulkan_renderer.ffi.sizeof)),
+            patch.object(
+                vulkan_renderer,
+                "ffi",
+                SimpleNamespace(
+                    memmove=Mock(),
+                    from_buffer=lambda data: data,
+                    new=vulkan_renderer.ffi.new,
+                    sizeof=vulkan_renderer.ffi.sizeof,
+                ),
+            ),
             patch("smalloldgames.rendering.vulkan_renderer.vkGetQueryPoolResults", side_effect=write_query_results),
             patch("smalloldgames.rendering.vulkan_renderer.vkWaitForFences"),
             patch("smalloldgames.rendering.vulkan_renderer.vkResetFences"),
@@ -103,9 +112,9 @@ class VulkanRendererTests(unittest.TestCase):
         with (
             patch.object(vulkan_renderer, "MAX_VERTEX_BYTES", 32),
             patch("smalloldgames.rendering.vulkan_renderer.glfw.get_framebuffer_size", return_value=(640, 480)),
+            self.assertRaises(ValueError),
         ):
-            with self.assertRaises(ValueError):
-                renderer.render(array("f", [0.0] * 16))
+            renderer.render(array("f", [0.0] * 16))
 
     def test_close_waits_and_closes_subsystems_once(self) -> None:
         renderer = self._make_renderer()

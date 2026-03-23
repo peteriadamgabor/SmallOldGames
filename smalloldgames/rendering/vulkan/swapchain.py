@@ -4,10 +4,10 @@ from typing import Any
 
 import glfw
 from vulkan import (
+    VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
     VK_COMMAND_BUFFER_LEVEL_PRIMARY,
     VK_COMPONENT_SWIZZLE_IDENTITY,
     VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-    VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
     VK_FORMAT_B8G8R8A8_UNORM,
     VK_IMAGE_ASPECT_COLOR_BIT,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -126,9 +126,12 @@ class VulkanSwapchain:
             oldSwapchain=None,
         )
         self.renderer.swapchain = self.renderer.fp_create_swapchain(self.renderer.device, create_info, None)
-        self.renderer.swapchain_images = list(self.renderer.fp_get_swapchain_images(self.renderer.device, self.renderer.swapchain))
+        self.renderer.swapchain_images = list(
+            self.renderer.fp_get_swapchain_images(self.renderer.device, self.renderer.swapchain)
+        )
         self.renderer.swapchain_image_views = [
-            create_image_view(self.renderer, image, self.renderer.swapchain_format) for image in self.renderer.swapchain_images
+            create_image_view(self.renderer, image, self.renderer.swapchain_format)
+            for image in self.renderer.swapchain_images
         ]
 
     def _choose_surface_format(self, formats: list[VkSurfaceFormatKHR]) -> VkSurfaceFormatKHR:

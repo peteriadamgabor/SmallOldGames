@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TypedDict
 
 from smalloldgames.assets import COMBINED_ATLAS
 from smalloldgames.data.benchmark_results import save_benchmark_result
@@ -49,21 +51,35 @@ class BenchmarkStageResult:
     completed: bool
 
 
+class BenchmarkSummary(TypedDict):
+    sample_count: int
+    avg_fps: float
+    avg_frame_ms: float
+    p95_frame_ms: float
+    avg_update_ms: float
+    avg_render_ms: float
+    avg_submit_ms: float
+    avg_gpu_frame_ms: float
+    p95_gpu_frame_ms: float
+    avg_vertices: float
+    max_vertices: int
+
+
 class BenchmarkScene:
     def __init__(
         self,
-        on_exit,
+        on_exit: Callable[[], Scene],
         *,
         ctx: SceneContext | None = None,
         stage_duration_seconds: float = 2.5,
         results_path: str | Path | None = None,
         auto_exit_on_finish: bool = False,
-        printer=print,
+        printer: Callable[[str], object] | None = None,
         stages: tuple[BenchmarkStageSpec, ...] | None = None,
     ) -> None:
-        self.on_exit = on_exit
+        self.exit_scene_factory = on_exit
         self.ctx = ctx
-        self.printer = printer
+        self.printer = print if printer is None else printer
         self.results_path = Path(results_path) if results_path is not None else None
         self.auto_exit_on_finish = auto_exit_on_finish
         self.stages = stages or _default_stages(stage_duration_seconds)
@@ -91,7 +107,7 @@ class BenchmarkScene:
             if not self.finished:
                 self._finish(cancelled=True)
                 return None
-            return Transition(self.on_exit())
+            return Transition(self.exit_scene_factory())
 
         if self.finished:
             if inputs.action_pressed(GameAction.CONFIRM, GameAction.RESTART):
@@ -175,7 +191,14 @@ class BenchmarkScene:
         draw.quad(30.0, 190.0, 480.0, 606.0, (0.05, 0.08, 0.14, 0.82), world=False)
         title = "BENCHMARK COMPLETE" if not self.cancelled else "BENCHMARK CANCELLED"
         draw.text(draw.width * 0.5, 760, title, scale=4, color=GOOD if not self.cancelled else ACCENT, centered=True)
-        draw.text(draw.width * 0.5, 726, "ENTER RUNS AGAIN   ESC RETURNS TO LAUNCHER", scale=2, color=TEXT_MUTED, centered=True)
+        draw.text(
+            draw.width * 0.5,
+            726,
+            "ENTER RUNS AGAIN   ESC RETURNS TO LAUNCHER",
+            scale=2,
+            color=TEXT_MUTED,
+            centered=True,
+        )
 
         y = 676.0
         for result in self.stage_results[-4:]:
@@ -224,9 +247,7 @@ class BenchmarkScene:
         self.report = self._build_report()
         self.saved_results_path, self.saved_archive_path = save_benchmark_result(self.report, path=self.results_path)
         self.quit_requested = self.auto_exit_on_finish
-        self.printer(
-            f"[benchmark] saved {'partial ' if cancelled else ''}results to {self.saved_results_path}"
-        )
+        self.printer(f"[benchmark] saved {'partial ' if cancelled else ''}results to {self.saved_results_path}")
         overall = self.report["overall"]
         self.printer(
             f"[benchmark] overall avg_fps={overall['avg_fps']:.1f} "
@@ -294,7 +315,7 @@ def _summarize_stage(
     )
 
 
-def _summarize_samples(samples: list[FrameProfile]) -> dict[str, float | int]:
+def _summarize_samples(samples: list[FrameProfile]) -> BenchmarkSummary:
     if not samples:
         return {
             "sample_count": 0,

@@ -7,9 +7,9 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import get_type_hints
 
-_log = logging.getLogger(__name__)
-
 from smalloldgames.assets import CONFIG_DIR
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,7 +188,11 @@ def validate_config(config: SketchHopperConfig) -> list[str]:
         value = getattr(config, field.name)
         if field.name.endswith(("_width", "_height", "_size")) and isinstance(value, (int, float)) and value <= 0:
             errors.append(f"{field.name} must be positive, got {value}")
-        if field.name.endswith(("_duration", "_cooldown", "_interval_min", "_interval_max")) and isinstance(value, (int, float)) and value <= 0:
+        if (
+            field.name.endswith(("_duration", "_cooldown", "_interval_min", "_interval_max"))
+            and isinstance(value, (int, float))
+            and value <= 0
+        ):
             errors.append(f"{field.name} must be positive, got {value}")
         if field.name.endswith("_chance") and isinstance(value, float) and not (0.0 <= value <= 1.0):
             errors.append(f"{field.name} must be between 0 and 1, got {value}")

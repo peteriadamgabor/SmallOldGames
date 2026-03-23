@@ -116,7 +116,9 @@ class PhysicsSystem:
     ) -> tuple[int, Monster] | None:
         best_target: tuple[int, int, Monster] | None = None
         seen_monsters: set[int] = set()
-        for cell in self._covered_spatial_cells(projectile.x, projectile.y, projectile.width, projectile.height, cell_size):
+        for cell in self._covered_spatial_cells(
+            projectile.x, projectile.y, projectile.width, projectile.height, cell_size
+        ):
             for order, entity_id, monster in monster_index.get(cell, []):
                 if entity_id in dead_monsters or entity_id in seen_monsters:
                     continue

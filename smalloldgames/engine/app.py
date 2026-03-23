@@ -11,8 +11,8 @@ from pathlib import Path
 import glfw
 
 from smalloldgames.data.storage import ScoreRepository
-from smalloldgames.games.benchmark_game import BenchmarkScene
 from smalloldgames.games import DEFAULT_GAME_MODULES
+from smalloldgames.games.benchmark_game import BenchmarkScene
 from smalloldgames.menus import LauncherScene, LeaderboardScene, SettingsScene
 
 from .audio import AudioEngine
@@ -83,7 +83,9 @@ class PlatformBootstrap(_AppComponent):
             ctx=self.ctx,
             on_exit=self._make_launcher,
         )
-        initial_scene = self._startup_scene_factory(self) if self._startup_scene_factory is not None else self._make_launcher()
+        initial_scene = (
+            self._startup_scene_factory(self) if self._startup_scene_factory is not None else self._make_launcher()
+        )
         self._transition_to(initial_scene)
 
     def close(self) -> None:

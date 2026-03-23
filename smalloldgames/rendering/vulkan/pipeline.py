@@ -21,6 +21,8 @@ from vulkan import (
     VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     VK_CULL_MODE_NONE,
     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+    VK_FORMAT_R32G32_SFLOAT,
+    VK_FORMAT_R32G32B32A32_SFLOAT,
     VK_FRONT_FACE_COUNTER_CLOCKWISE,
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -31,8 +33,6 @@ from vulkan import (
     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
     VK_POLYGON_MODE_FILL,
     VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-    VK_FORMAT_R32G32_SFLOAT,
-    VK_FORMAT_R32G32B32A32_SFLOAT,
     VK_SAMPLE_COUNT_1_BIT,
     VK_SHADER_STAGE_FRAGMENT_BIT,
     VK_SHADER_STAGE_VERTEX_BIT,
@@ -46,8 +46,8 @@ from vulkan import (
     VkCommandBufferBeginInfo,
     VkDescriptorSetLayoutBinding,
     VkDescriptorSetLayoutCreateInfo,
-    VkGraphicsPipelineCreateInfo,
     VkExtent2D,
+    VkGraphicsPipelineCreateInfo,
     VkOffset2D,
     VkPipelineColorBlendAttachmentState,
     VkPipelineColorBlendStateCreateInfo,
@@ -71,10 +71,10 @@ from vulkan import (
     vkCmdBeginRenderPass,
     vkCmdBindDescriptorSets,
     vkCmdBindPipeline,
-    vkCmdResetQueryPool,
     vkCmdBindVertexBuffers,
     vkCmdDraw,
     vkCmdEndRenderPass,
+    vkCmdResetQueryPool,
     vkCmdWriteTimestamp,
     vkCreateDescriptorSetLayout,
     vkCreateGraphicsPipelines,
@@ -133,7 +133,9 @@ class VulkanPipeline:
         vkBeginCommandBuffer(command_buffer, begin_info)
         if self.renderer.gpu_timing_query_pool is not None:
             vkCmdResetQueryPool(command_buffer, self.renderer.gpu_timing_query_pool, 0, 2)
-            vkCmdWriteTimestamp(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, self.renderer.gpu_timing_query_pool, 0)
+            vkCmdWriteTimestamp(
+                command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, self.renderer.gpu_timing_query_pool, 0
+            )
 
         clear_value = VkClearValue(color=VkClearColorValue(float32=CLEAR_COLOR))
         render_pass_begin = VkRenderPassBeginInfo(

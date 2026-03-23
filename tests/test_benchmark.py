@@ -6,11 +6,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from smalloldgames.benchmark import main as benchmark_main
 from smalloldgames.data.benchmark_results import save_benchmark_result
 from smalloldgames.engine import GameAction
 from smalloldgames.engine.debug_overlay import FrameProfile
 from smalloldgames.engine.input import InputState
-from smalloldgames.benchmark import main as benchmark_main
 from smalloldgames.games.benchmark import BenchmarkScene
 
 
@@ -18,7 +18,9 @@ class BenchmarkTests(unittest.TestCase):
     def test_save_benchmark_result_writes_latest_and_archive_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             target = Path(temp_dir) / "benchmark_latest.json"
-            latest, archive = save_benchmark_result({"finished_at": "2026-03-23T12:00:00+00:00", "status": "ok"}, path=target)
+            latest, archive = save_benchmark_result(
+                {"finished_at": "2026-03-23T12:00:00+00:00", "status": "ok"}, path=target
+            )
 
             self.assertEqual(latest, target)
             self.assertTrue(latest.exists())

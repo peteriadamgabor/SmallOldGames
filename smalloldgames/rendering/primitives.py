@@ -72,12 +72,54 @@ class DrawList:
         """
         self.vertices.extend(
             (
-                x0, y0, r0, g0, b0, a0, u0, v0,
-                x1, y0, r1, g1, b1, a1, u1, v0,
-                x1, y1, r2, g2, b2, a2, u1, v1,
-                x0, y0, r0, g0, b0, a0, u0, v0,
-                x1, y1, r2, g2, b2, a2, u1, v1,
-                x0, y1, r3, g3, b3, a3, u0, v1,
+                x0,
+                y0,
+                r0,
+                g0,
+                b0,
+                a0,
+                u0,
+                v0,
+                x1,
+                y0,
+                r1,
+                g1,
+                b1,
+                a1,
+                u1,
+                v0,
+                x1,
+                y1,
+                r2,
+                g2,
+                b2,
+                a2,
+                u1,
+                v1,
+                x0,
+                y0,
+                r0,
+                g0,
+                b0,
+                a0,
+                u0,
+                v0,
+                x1,
+                y1,
+                r2,
+                g2,
+                b2,
+                a2,
+                u1,
+                v1,
+                x0,
+                y1,
+                r3,
+                g3,
+                b3,
+                a3,
+                u0,
+                v1,
             )
         )
 
@@ -114,12 +156,30 @@ class DrawList:
         tr_r, tr_g, tr_b, tr_a = top_right
         tl_r, tl_g, tl_b, tl_a = top_left
         self._emit_quad(
-            x0, y0, x1, y1,
-            bl_r, bl_g, bl_b, bl_a,
-            br_r, br_g, br_b, br_a,
-            tr_r, tr_g, tr_b, tr_a,
-            tl_r, tl_g, tl_b, tl_a,
-            u, v, u, v,
+            x0,
+            y0,
+            x1,
+            y1,
+            bl_r,
+            bl_g,
+            bl_b,
+            bl_a,
+            br_r,
+            br_g,
+            br_b,
+            br_a,
+            tr_r,
+            tr_g,
+            tr_b,
+            tr_a,
+            tl_r,
+            tl_g,
+            tl_b,
+            tl_a,
+            u,
+            v,
+            u,
+            v,
         )
 
     def quad(
@@ -205,7 +265,6 @@ class DrawList:
         cam = self._cam_y if world else 0.0
         r, g, b, a = color
         font_glyphs = self.font_glyphs
-        vertices = self.vertices
         char_step = FONT_CHAR_STEP * scale
         glyph_w = FONT_GLYPH_WIDTH * scale
         glyph_h = FONT_GLYPH_HEIGHT * scale
@@ -223,9 +282,30 @@ class DrawList:
                 su0, su1 = sprite.u0, sprite.u1
                 sv0, sv1 = sprite.v1, sprite.v0
                 self._emit_quad(
-                    x0, y0, x1, y1,
-                    r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a,
-                    su0, sv0, su1, sv1,
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    r,
+                    g,
+                    b,
+                    a,
+                    r,
+                    g,
+                    b,
+                    a,
+                    r,
+                    g,
+                    b,
+                    a,
+                    r,
+                    g,
+                    b,
+                    a,
+                    su0,
+                    sv0,
+                    su1,
+                    sv1,
                 )
             else:
                 self._draw_bitmap_glyph(cursor_x, y, FONT_5X7[character], scale=scale, color=color, world=world)
@@ -252,12 +332,30 @@ class DrawList:
         u0, u1 = (sprite.u1, sprite.u0) if flip_x else (sprite.u0, sprite.u1)
         v0, v1 = sprite.v1, sprite.v0
         self._emit_quad(
-            x0, y0, x1, y1,
-            1.0, 1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0, 1.0,
-            u0, v0, u1, v1,
+            x0,
+            y0,
+            x1,
+            y1,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            u0,
+            v0,
+            u1,
+            v1,
         )
 
     @staticmethod

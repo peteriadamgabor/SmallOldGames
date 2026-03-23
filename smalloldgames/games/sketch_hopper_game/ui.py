@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import glfw
 
-from smalloldgames.engine import GameAction, InputState, Scene, SceneResult, Transition
+from smalloldgames.engine import GameAction, InputState, SceneResult, Transition
 
 from .config import (
     load_sketch_hopper_config,

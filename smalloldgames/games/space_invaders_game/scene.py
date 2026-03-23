@@ -169,7 +169,7 @@ class SpaceInvadersScene:
         ctx: SceneContext | None = None,
         seed: int | None = None,
     ) -> None:
-        self.on_exit = on_exit
+        self.exit_scene_factory = on_exit
         self.score_repository = ctx.score_repository if ctx else None
         self.audio = ctx.audio if ctx else None
         self.rng = random.Random(seed)
@@ -240,7 +240,7 @@ class SpaceInvadersScene:
     # -----------------------------------------------------------------------
     def update(self, dt: float, inputs: InputState) -> SceneResult:
         if inputs.action_pressed(GameAction.BACK):
-            return Transition(self.on_exit())
+            return Transition(self.exit_scene_factory())
 
         if inputs.action_pressed(GameAction.PAUSE):
             if not self.game_over:

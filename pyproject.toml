@@ -39,13 +39,29 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = [
     "smalloldgames.rendering.vulkan_renderer",
+    "smalloldgames.rendering.vulkan.device",
+    "smalloldgames.rendering.vulkan.pipeline",
+    "smalloldgames.rendering.vulkan.resources",
+    "smalloldgames.rendering.vulkan.swapchain",
     "smalloldgames.games.sketch_hopper_game.systems",
     "smalloldgames.games.sketch_hopper_game.rendering",
     "smalloldgames.games.sketch_hopper_game.ui",
     "smalloldgames.games.sketch_hopper_game.scene",
     "smalloldgames.games.sketch_hopper_game.config",
+    "smalloldgames.games.sketch_hopper_game.spawn",
+    "smalloldgames.games.sketch_hopper_game.physics",
+    "smalloldgames.games.sketch_hopper_game.collision",
+    "smalloldgames.games.sketch_hopper_game.cleanup",
     "smalloldgames.assets.sprites",
     "smalloldgames.engine.app",
     "smalloldgames.engine.audio",
 ]
-disable_error_code = ["attr-defined", "misc", "arg-type", "assignment", "has-type", "union-attr", "override"]
+disable_error_code = [
+    "attr-defined",
+    "misc",
+    "arg-type",
+    "assignment",
+    "has-type",
+    "union-attr",
+    "override",
+]

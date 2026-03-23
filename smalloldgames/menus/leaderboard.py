@@ -3,7 +3,7 @@ from __future__ import annotations
 import glfw
 
 from smalloldgames.data.storage import ScoreEntry, ScoreStats
-from smalloldgames.engine import GameAction, GameDefinition, InputState, Scene, SceneContext, SceneResult, Transition
+from smalloldgames.engine import GameAction, GameDefinition, InputState, SceneContext, SceneResult, Transition
 from smalloldgames.rendering.primitives import DrawList
 
 from .common import (
@@ -132,7 +132,7 @@ class LeaderboardScene:
     def on_exit(self) -> None:
         pass
 
-    def _update_name_editor(self, inputs: InputState) -> Scene | None:
+    def _update_name_editor(self, inputs: InputState) -> SceneResult:
         if inputs.was_pressed(glfw.KEY_ESCAPE):
             self.editing_name = False
             self.draft_name = self.player_name
