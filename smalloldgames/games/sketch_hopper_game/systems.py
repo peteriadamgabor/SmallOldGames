@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import math
+
+from smalloldgames.engine.particles import EmitterConfig, ParticleEmitter
 from smalloldgames.engine.persistence import PersistenceMixin
+from smalloldgames.rendering.primitives import DrawList
 
 from .cleanup import CleanupSystem
 from .collision import CollisionSystem
@@ -86,6 +90,7 @@ class SketchHopperSystemsMixin(SpawnSystem, PhysicsSystem, CollisionSystem, Clea
                 text=text,
             )
         )
+        self._emit_particles(x, y, color, count=6)
 
     def _camera_shake_offset(self) -> float:
         return self.camera.offset_y() - self.camera.y
@@ -99,6 +104,46 @@ class SketchHopperSystemsMixin(SpawnSystem, PhysicsSystem, CollisionSystem, Clea
             self.player.x + self.player.width * 0.5, self.player.y + self.player.height * 0.5, (0.48, 0.82, 1.0, 0.92)
         )
         return True
+
+    # --- Particles ---
+
+    def _emit_particles(
+        self, x: float, y: float, color: Color, *, count: int = 8, speed: float = 80.0, gravity: float = -200.0,
+    ) -> None:
+        emitter = ParticleEmitter(
+            x=x,
+            y=y,
+            active=False,
+            config=EmitterConfig(
+                rate=0.0,
+                life_min=0.2,
+                life_max=0.5,
+                speed_min=speed * 0.5,
+                speed_max=speed,
+                angle_min=0.0,
+                angle_max=math.tau,
+                size_min=2.0,
+                size_max=4.0,
+                color_start=color,
+                color_end=(color[0], color[1], color[2], 0.0),
+                gravity=gravity,
+                max_particles=count,
+            ),
+        )
+        emitter.burst(count)
+        self._particle_emitters.append(emitter)
+
+    def _tick_particles(self, dt: float) -> None:
+        alive: list[ParticleEmitter] = []
+        for emitter in self._particle_emitters:
+            emitter.tick(dt)
+            if emitter.alive:
+                alive.append(emitter)
+        self._particle_emitters = alive
+
+    def _render_particles(self, draw: DrawList) -> None:
+        for emitter in self._particle_emitters:
+            emitter.render(draw, world=True)
 
     # --- Theme ---
 

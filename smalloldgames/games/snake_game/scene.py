@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Callable
 
 from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion
 from smalloldgames.engine.game_state import FLOW_CONTINUE, GameFlowMixin
+from smalloldgames.engine.particles import EmitterConfig, ParticleEmitter
 from smalloldgames.engine.persistence import PersistenceMixin
 from smalloldgames.engine.touch import TouchButton, build_touch_regions, render_touch_buttons
 from smalloldgames.engine.ui import draw_gradient_background, draw_overlay_panel, draw_score_hud
@@ -12,6 +14,20 @@ from smalloldgames.menus.components import BASE_PANEL, draw_panel
 from smalloldgames.rendering.primitives import DrawList
 
 from .assets import SNAKE_ATLAS
+
+_FOOD_PARTICLES = EmitterConfig(
+    rate=0.0, life_min=0.2, life_max=0.45, speed_min=30.0, speed_max=70.0,
+    angle_min=0.0, angle_max=math.tau, size_min=2.0, size_max=4.0,
+    color_start=(0.43, 0.86, 0.54, 0.9), color_end=(0.43, 0.86, 0.54, 0.0),
+    gravity=-40.0, max_particles=10,
+)
+
+_DEATH_PARTICLES = EmitterConfig(
+    rate=0.0, life_min=0.3, life_max=0.6, speed_min=50.0, speed_max=120.0,
+    angle_min=0.0, angle_max=math.tau, size_min=3.0, size_max=6.0,
+    color_start=(1.0, 0.3, 0.3, 1.0), color_end=(1.0, 0.3, 0.3, 0.0),
+    gravity=-80.0, max_particles=16,
+)
 
 
 class SnakeScene(GameFlowMixin, PersistenceMixin):
@@ -49,6 +65,7 @@ class SnakeScene(GameFlowMixin, PersistenceMixin):
         self.move_timer = 0.0
         self.move_speed = 0.15
         self.score_saved = False
+        self._emitters: list[ParticleEmitter] = []
 
     def update(self, dt: float, inputs: InputState) -> SceneResult:
         result = self._handle_game_flow(inputs)
@@ -61,6 +78,13 @@ class SnakeScene(GameFlowMixin, PersistenceMixin):
         if self.move_timer >= self.move_speed:
             self.move_timer = 0.0
             self._step()
+
+        alive: list[ParticleEmitter] = []
+        for emitter in self._emitters:
+            emitter.tick(dt)
+            if emitter.alive:
+                alive.append(emitter)
+        self._emitters = alive
 
         return None
 
@@ -88,6 +112,10 @@ class SnakeScene(GameFlowMixin, PersistenceMixin):
             draw.sprite(
                 sx, sy, SNAKE_ATLAS.sprites[sprite_name], width=self.cell_size, height=self.cell_size, world=False
             )
+
+        # Particles
+        for emitter in self._emitters:
+            emitter.render(draw, world=False)
 
         # HUD
         draw_score_hud(draw, title="SNAKE CLASSIC", score=self.score, best_score=self.best_score)
@@ -123,10 +151,11 @@ class SnakeScene(GameFlowMixin, PersistenceMixin):
 
         if new_head == self.food:
             self.score += 10
+            fx, fy = self._grid_to_screen(new_head)
+            self._burst(fx + self.cell_size * 0.5, fy + self.cell_size * 0.5, _FOOD_PARTICLES, 8)
             self.food = self._spawn_food()
             self.move_speed = max(0.08, 0.15 - (self.score / 500.0) * 0.07)
-            if self.audio:
-                self.audio.play("jump")  # Reusing jump as a 'pick up' sound
+            self._play_sound("jump")
         else:
             self.snake.pop()
 
@@ -152,7 +181,14 @@ class SnakeScene(GameFlowMixin, PersistenceMixin):
     def _trigger_game_over(self) -> None:
         self.game_over = True
         self._play_sound("hit")
+        hx, hy = self._grid_to_screen(self.snake[0])
+        self._burst(hx + self.cell_size * 0.5, hy + self.cell_size * 0.5, _DEATH_PARTICLES, 14)
         self._finalize_score()
+
+    def _burst(self, x: float, y: float, config: EmitterConfig, count: int) -> None:
+        emitter = ParticleEmitter(x=x, y=y, active=False, config=config)
+        emitter.burst(count)
+        self._emitters.append(emitter)
 
     _TOUCH_LAYOUT = (
         TouchButton(210, 140, 120, 80, "UP", frozenset({GameAction.NAV_UP})),

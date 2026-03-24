@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -7,6 +8,7 @@ from dataclasses import dataclass
 from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion
 from smalloldgames.engine.collision import aabb_overlaps_raw
 from smalloldgames.engine.game_state import FLOW_CONTINUE, GameFlowMixin
+from smalloldgames.engine.particles import EmitterConfig, ParticleEmitter
 from smalloldgames.engine.persistence import PersistenceMixin
 from smalloldgames.engine.physics import clamp
 from smalloldgames.engine.touch import TouchButton, render_touch_buttons
@@ -35,6 +37,27 @@ BULLET_COLOR: Color = (1.0, 1.0, 1.0, 1.0)
 BOMB_COLOR: Color = (1.0, 0.3, 0.3, 1.0)
 LIVES_COLOR: Color = (0.2, 0.85, 0.3, 1.0)
 UFO_COLOR: Color = (1.0, 0.2, 0.4, 1.0)
+
+_ALIEN_KILL_PARTICLES = EmitterConfig(
+    rate=0.0, life_min=0.15, life_max=0.35, speed_min=40.0, speed_max=100.0,
+    angle_min=0.0, angle_max=math.tau, size_min=2.0, size_max=4.0,
+    color_start=(0.43, 0.86, 0.54, 1.0), color_end=(0.43, 0.86, 0.54, 0.0),
+    gravity=0.0, max_particles=10,
+)
+
+_UFO_KILL_PARTICLES = EmitterConfig(
+    rate=0.0, life_min=0.2, life_max=0.45, speed_min=50.0, speed_max=120.0,
+    angle_min=0.0, angle_max=math.tau, size_min=3.0, size_max=6.0,
+    color_start=(1.0, 0.2, 0.4, 1.0), color_end=(1.0, 0.8, 0.2, 0.0),
+    gravity=0.0, max_particles=14,
+)
+
+_PLAYER_HIT_PARTICLES = EmitterConfig(
+    rate=0.0, life_min=0.3, life_max=0.5, speed_min=40.0, speed_max=90.0,
+    angle_min=0.0, angle_max=math.tau, size_min=2.0, size_max=5.0,
+    color_start=(1.0, 0.3, 0.3, 1.0), color_end=(1.0, 0.3, 0.3, 0.0),
+    gravity=-60.0, max_particles=12,
+)
 
 # ---------------------------------------------------------------------------
 # Layout constants
@@ -207,6 +230,7 @@ class SpaceInvadersScene(GameFlowMixin, PersistenceMixin):
         self.ufo_x = 0.0
         self.ufo_dir = 1.0
         self.ufo_timer = 0.0
+        self._emitters: list[ParticleEmitter] = []
 
         self._spawn_wave()
 
@@ -248,6 +272,7 @@ class SpaceInvadersScene(GameFlowMixin, PersistenceMixin):
         self._update_aliens(dt)
         self._update_ufo(dt)
         self._check_wave_clear()
+        self._tick_emitters(dt)
         return None
 
     def render(self, draw: DrawList) -> None:
@@ -258,6 +283,7 @@ class SpaceInvadersScene(GameFlowMixin, PersistenceMixin):
         self._render_player(draw)
         self._render_bullets(draw)
         self._render_bombs(draw)
+        self._render_emitters(draw)
         self._render_hud(draw)
         if self.touch_controls_enabled and not self.game_over and not self.paused:
             self._render_touch_controls(draw)
@@ -327,6 +353,7 @@ class SpaceInvadersScene(GameFlowMixin, PersistenceMixin):
             ):
                 alien.alive = False
                 self.score += ALIEN_POINTS[alien.alien_type]
+                self._burst(ax + ALIEN_W * 0.5, ay + ALIEN_H * 0.5, _ALIEN_KILL_PARTICLES, 8)
                 if self.audio:
                     self.audio.play("hit")
                 return True
@@ -392,6 +419,7 @@ class SpaceInvadersScene(GameFlowMixin, PersistenceMixin):
         self.lives -= 1
         self.player_hit_timer = 2.0
         self.bombs.clear()
+        self._burst(self.player_x, PLAYER_Y + PLAYER_H * 0.5, _PLAYER_HIT_PARTICLES, 12)
         if self.audio:
             self.audio.play("game_over" if self.lives <= 0 else "break")
         if self.lives <= 0:
@@ -475,6 +503,7 @@ class SpaceInvadersScene(GameFlowMixin, PersistenceMixin):
                 ):
                     ufo_points = self.rng.choice([50, 100, 150, 300])
                     self.score += ufo_points
+                    self._burst(self.ufo_x, UFO_Y, _UFO_KILL_PARTICLES, 12)
                     self.ufo_active = False
                     self.ufo_timer = self.rng.uniform(UFO_INTERVAL_MIN, UFO_INTERVAL_MAX)
                     self.bullets.remove(bullet)
@@ -594,6 +623,26 @@ class SpaceInvadersScene(GameFlowMixin, PersistenceMixin):
         lx = 30.0
         for i in range(self.lives):
             draw.sprite(lx + i * 32, 820, CANNON_SPRITE, width=24.0, height=16.0, world=False)
+
+    # -----------------------------------------------------------------------
+    # Particles
+    # -----------------------------------------------------------------------
+    def _burst(self, x: float, y: float, config: EmitterConfig, count: int) -> None:
+        emitter = ParticleEmitter(x=x, y=y, active=False, config=config)
+        emitter.burst(count)
+        self._emitters.append(emitter)
+
+    def _tick_emitters(self, dt: float) -> None:
+        alive: list[ParticleEmitter] = []
+        for emitter in self._emitters:
+            emitter.tick(dt)
+            if emitter.alive:
+                alive.append(emitter)
+        self._emitters = alive
+
+    def _render_emitters(self, draw: DrawList) -> None:
+        for emitter in self._emitters:
+            emitter.render(draw, world=False)
 
     def _on_pause_input(self, inputs: InputState) -> SceneResult:
         if inputs.action_pressed(GameAction.CONFIRM) or (

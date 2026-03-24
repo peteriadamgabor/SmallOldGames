@@ -208,6 +208,10 @@ class PhysicsSystem:
                 )
                 return
             self.player.y = top
+            self._emit_particles(
+                self.player.x + self.player.width * 0.5, top, (0.85, 0.88, 0.92, 0.7),
+                count=4, speed=40.0, gravity=-60.0,
+            )
             if platform.kind == "spring":
                 platform.spring_timer = self.spring_feedback_duration
                 self.player.velocity_y = self.spring_jump_velocity
