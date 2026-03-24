@@ -9,7 +9,7 @@ from typing import Protocol
 
 import miniaudio
 
-_SAMPLE_RATE = 22_050
+_SAMPLE_RATE = 44_100
 _MAX_ACTIVE_EFFECTS = 8
 
 _EFFECTS: dict[str, tuple[tuple[float, float, float], ...]] = {
@@ -113,7 +113,7 @@ class _MiniaudioBackend:
             output_format=miniaudio.SampleFormat.SIGNED16,
             nchannels=1,
             sample_rate=_SAMPLE_RATE,
-            buffersize_msec=70,
+            buffersize_msec=25,
             app_name="SmallOldGames",
         )
         self._stream = self._stream_generator()
@@ -195,6 +195,7 @@ class AudioEngine:
         self._requested_music: str | None = None
         self._effect_cache: dict[str, bytes] = {}
         self._music_cache: dict[str, bytes] = {}
+        self._prewarm_effects()
 
     def play(self, effect_name: str) -> None:
         if not self.enabled:
@@ -233,6 +234,11 @@ class AudioEngine:
             self._backend.stop_effects()
         elif self._requested_music is not None:
             self.play_music(self._requested_music)
+
+    def _prewarm_effects(self) -> None:
+        """Pre-synthesize all effects so first play has no delay."""
+        for name, segments in _EFFECTS.items():
+            self._effect_cache[name] = synthesize_pcm(segments)
 
     def _effect_clip(self, effect_name: str, segments: tuple[tuple[float, float, float], ...]) -> bytes:
         clip = self._effect_cache.get(effect_name)
