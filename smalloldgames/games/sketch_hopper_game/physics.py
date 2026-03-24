@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import math
 
+from smalloldgames.engine.collision import aabb_overlaps_raw, covered_cells
+from smalloldgames.engine.physics import bounce_x, wrap_x
+
 from .shared import BlackHole, Cloud, ImpactEffect, Monster, Projectile
 
 
@@ -16,22 +19,16 @@ class PhysicsSystem:
             if platform.kind != "moving" or platform.broken:
                 continue
             platform.x += platform.velocity_x * dt
-            if platform.x <= 0.0:
-                platform.x = 0.0
-                platform.velocity_x *= -1.0
-            if platform.x + platform.width >= self.world_width:
-                platform.x = self.world_width - platform.width
-                platform.velocity_x *= -1.0
+            platform.x, platform.velocity_x = bounce_x(
+                platform.x, platform.velocity_x, platform.width, 0.0, self.world_width,
+            )
 
     def _tick_monsters(self, dt: float) -> None:
         for _, monster in self.dynamic_world.components(Monster).items():
             monster.x += monster.velocity_x * dt
-            if monster.x <= 0.0:
-                monster.x = 0.0
-                monster.velocity_x *= -1.0
-            if monster.x + monster.width >= self.world_width:
-                monster.x = self.world_width - monster.width
-                monster.velocity_x *= -1.0
+            monster.x, monster.velocity_x = bounce_x(
+                monster.x, monster.velocity_x, monster.width, 0.0, self.world_width,
+            )
             if monster.bob_amplitude > 0.0:
                 monster.bob_phase += monster.bob_speed * dt
                 monster.y = monster.base_y + math.sin(monster.bob_phase) * monster.bob_amplitude
@@ -55,7 +52,7 @@ class PhysicsSystem:
         for entity_id, projectile in self.dynamic_world.components(Projectile).items():
             projectile.y += projectile.velocity_y * dt
             if projectile.hostile:
-                if self._intersects(
+                if aabb_overlaps_raw(
                     projectile.x,
                     projectile.y,
                     projectile.width,
@@ -103,7 +100,7 @@ class PhysicsSystem:
         # Bucket monsters so projectile checks only touch nearby cells.
         index: dict[tuple[int, int], list[tuple[int, int, Monster]]] = {}
         for order, (entity_id, monster) in enumerate(monster_entities):
-            for cell in self._covered_spatial_cells(monster.x, monster.y, monster.width, monster.height, cell_size):
+            for cell in covered_cells(monster.x, monster.y, monster.width, monster.height, cell_size):
                 index.setdefault(cell, []).append((order, entity_id, monster))
         return index
 
@@ -116,14 +113,14 @@ class PhysicsSystem:
     ) -> tuple[int, Monster] | None:
         best_target: tuple[int, int, Monster] | None = None
         seen_monsters: set[int] = set()
-        for cell in self._covered_spatial_cells(
+        for cell in covered_cells(
             projectile.x, projectile.y, projectile.width, projectile.height, cell_size
         ):
             for order, entity_id, monster in monster_index.get(cell, []):
                 if entity_id in dead_monsters or entity_id in seen_monsters:
                     continue
                 seen_monsters.add(entity_id)
-                if not self._intersects(
+                if not aabb_overlaps_raw(
                     projectile.x,
                     projectile.y,
                     projectile.width,
@@ -139,19 +136,6 @@ class PhysicsSystem:
         if best_target is None:
             return None
         return best_target[1], best_target[2]
-
-    def _covered_spatial_cells(
-        self, x: float, y: float, width: float, height: float, cell_size: float
-    ) -> list[tuple[int, int]]:
-        min_cell_x = math.floor(x / cell_size)
-        max_cell_x = math.floor((x + width) / cell_size)
-        min_cell_y = math.floor(y / cell_size)
-        max_cell_y = math.floor((y + height) / cell_size)
-        return [
-            (cell_x, cell_y)
-            for cell_x in range(min_cell_x, max_cell_x + 1)
-            for cell_y in range(min_cell_y, max_cell_y + 1)
-        ]
 
     def _tick_clouds(self, dt: float) -> None:
         for _, cloud in self.dynamic_world.components(Cloud).items():
@@ -181,7 +165,7 @@ class PhysicsSystem:
             self.player.velocity_x = move_axis * self.move_speed * self.jetpack_move_speed_multiplier
             if move_axis != 0.0:
                 self.player_facing_right = move_axis > 0.0
-            self.player.x = (self.player.x + self.player.velocity_x * dt) % self.world_width
+            self.player.x = wrap_x(self.player.x + self.player.velocity_x * dt, self.world_width)
             self.player.velocity_y = boost_velocity
             self.player.y += self.player.velocity_y * dt
             return
@@ -189,7 +173,7 @@ class PhysicsSystem:
         self.player.velocity_x = move_axis * self.move_speed
         if move_axis != 0.0:
             self.player_facing_right = move_axis > 0.0
-        self.player.x = (self.player.x + self.player.velocity_x * dt) % self.world_width
+        self.player.x = wrap_x(self.player.x + self.player.velocity_x * dt, self.world_width)
         self.player.velocity_y += self.gravity * dt
         self.player.y += self.player.velocity_y * dt
 

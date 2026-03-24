@@ -165,10 +165,6 @@ class SketchHopperUIMixin:
             return Transition(self.on_exit())
         return None
 
-    @staticmethod
-    def _intersects(ax: float, ay: float, aw: float, ah: float, bx: float, by: float, bw: float, bh: float) -> bool:
-        return ax < bx + bw and ax + aw > bx and ay < by + bh and ay + ah > by
-
     def _left_touch_rect(self) -> tuple[float, float, float, float]:
         return (20.0, 18.0, 118.0, 84.0)
 

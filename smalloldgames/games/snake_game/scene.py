@@ -4,13 +4,10 @@ import random
 from collections.abc import Callable
 
 from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion, Transition
+from smalloldgames.engine.ui import draw_overlay_panel, draw_score_hud
 from smalloldgames.menus.common import (
-    ACCENT,
     BG_BOTTOM,
     BG_TOP,
-    GOOD,
-    TEXT_LIGHT,
-    TEXT_MUTED,
 )
 from smalloldgames.menus.components import BASE_PANEL, draw_button, draw_panel
 from smalloldgames.rendering.primitives import DrawList
@@ -123,19 +120,19 @@ class SnakeScene:
             )
 
         # HUD
-        draw.text(draw.width * 0.5, 888, "SNAKE CLASSIC", scale=3, color=TEXT_LIGHT, centered=True)
-        draw.text(60, 820, f"SCORE: {self.score:04d}", scale=2, color=GOOD)
-        best_text = f"BEST: {self.best_score:04d}"
-        best_width = draw.measure_text(best_text, scale=2)
-        draw.text(draw.width - 60 - best_width, 820, best_text, scale=2, color=ACCENT)
+        draw_score_hud(draw, title="SNAKE CLASSIC", score=self.score, best_score=self.best_score)
 
         if self.touch_controls_enabled:
             self._render_touch_controls(draw)
 
         if self.paused:
-            self._render_overlay(draw, "PAUSED", "PRESS P OR TAP TO RESUME")
+            draw_overlay_panel(
+                draw, title="PAUSED", title_y=420.0, subtitle="PRESS P OR TAP TO RESUME", subtitle_y=370.0,
+            )
         elif self.game_over:
-            self._render_overlay(draw, "GAME OVER", "PRESS R OR TAP TO RESTART")
+            draw_overlay_panel(
+                draw, title="GAME OVER", title_y=420.0, subtitle="PRESS R OR TAP TO RESTART", subtitle_y=370.0,
+            )
 
     def _step(self) -> None:
         self.direction = self.next_direction
@@ -214,11 +211,6 @@ class SnakeScene:
         if self.score_repository is None:
             return True
         return self.score_repository.get_touch_controls_enabled()
-
-    def _render_overlay(self, draw: DrawList, title: str, subtitle: str) -> None:
-        draw.quad(0, 0, draw.width, draw.height, (0, 0, 0, 0.6), world=False)
-        draw.text(draw.width * 0.5, 420, title, scale=4, color=TEXT_LIGHT, centered=True)
-        draw.text(draw.width * 0.5, 370, subtitle, scale=1.5, color=TEXT_MUTED, centered=True)
 
     def _render_touch_controls(self, draw: DrawList) -> None:
         # D-pad style touch hints

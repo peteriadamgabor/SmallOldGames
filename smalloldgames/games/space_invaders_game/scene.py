@@ -5,12 +5,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion, Transition
+from smalloldgames.engine.collision import aabb_overlaps_raw
+from smalloldgames.engine.physics import clamp
+from smalloldgames.engine.ui import draw_overlay_panel, draw_score_hud
 from smalloldgames.menus.common import (
-    ACCENT,
     BG_BOTTOM,
     BG_TOP,
-    GOOD,
-    TEXT_LIGHT,
     TEXT_MUTED,
 )
 from smalloldgames.menus.components import draw_button
@@ -313,7 +313,7 @@ class SpaceInvadersScene:
         move = inputs.action_axis(GameAction.MOVE_LEFT, GameAction.MOVE_RIGHT)
 
         self.player_x += move * PLAYER_SPEED * dt
-        self.player_x = max(PLAY_LEFT + PLAYER_W * 0.5, min(PLAY_RIGHT - PLAYER_W * 0.5, self.player_x))
+        self.player_x = clamp(self.player_x, PLAY_LEFT + PLAYER_W * 0.5, PLAY_RIGHT - PLAYER_W * 0.5)
 
         should_fire = inputs.action_pressed(GameAction.FIRE)
 
@@ -342,9 +342,12 @@ class SpaceInvadersScene:
         for alien in self.aliens:
             if not alien.alive:
                 continue
-            ax = self.grid_x + alien.col * ALIEN_SPACING_X
-            ay = self.grid_y + alien.row * ALIEN_SPACING_Y
-            if abs(bullet.x - ax) < ALIEN_W * 0.5 and abs(bullet.y - ay) < ALIEN_H * 0.5:
+            ax = self.grid_x + alien.col * ALIEN_SPACING_X - ALIEN_W * 0.5
+            ay = self.grid_y + alien.row * ALIEN_SPACING_Y - ALIEN_H * 0.5
+            if aabb_overlaps_raw(
+                bullet.x - BULLET_W * 0.5, bullet.y - BULLET_H * 0.5, BULLET_W, BULLET_H,
+                ax, ay, ALIEN_W, ALIEN_H,
+            ):
                 alien.alive = False
                 self.score += ALIEN_POINTS[alien.alien_type]
                 if self.audio:
@@ -358,9 +361,9 @@ class SpaceInvadersScene:
             for block in list(shield):
                 bx = sx + block[0] * SHIELD_BLOCK
                 by = SHIELD_Y + block[1] * SHIELD_BLOCK
-                if (
-                    abs(bullet.x - bx - SHIELD_BLOCK * 0.5) < (BULLET_W + SHIELD_BLOCK) * 0.5
-                    and abs(bullet.y - by - SHIELD_BLOCK * 0.5) < (BULLET_H + SHIELD_BLOCK) * 0.5
+                if aabb_overlaps_raw(
+                    bullet.x - BULLET_W * 0.5, bullet.y - BULLET_H * 0.5, BULLET_W, BULLET_H,
+                    bx, by, SHIELD_BLOCK, SHIELD_BLOCK,
                 ):
                     shield.discard(block)
                     return True
@@ -386,9 +389,9 @@ class SpaceInvadersScene:
     def _bomb_vs_player(self, bomb: Bomb) -> bool:
         if self.player_hit_timer > 0.0:
             return False
-        if (
-            abs(bomb.x - self.player_x) < PLAYER_W * 0.5
-            and abs(bomb.y - PLAYER_Y - PLAYER_H * 0.5) < (BOMB_H + PLAYER_H) * 0.5
+        if aabb_overlaps_raw(
+            bomb.x - BOMB_W * 0.5, bomb.y - BOMB_H * 0.5, BOMB_W, BOMB_H,
+            self.player_x - PLAYER_W * 0.5, PLAYER_Y, PLAYER_W, PLAYER_H,
         ):
             self._player_killed()
             return True
@@ -400,9 +403,9 @@ class SpaceInvadersScene:
             for block in list(shield):
                 bx = sx + block[0] * SHIELD_BLOCK
                 by = SHIELD_Y + block[1] * SHIELD_BLOCK
-                if (
-                    abs(bomb.x - bx - SHIELD_BLOCK * 0.5) < (BOMB_W + SHIELD_BLOCK) * 0.5
-                    and abs(bomb.y - by - SHIELD_BLOCK * 0.5) < (BOMB_H + SHIELD_BLOCK) * 0.5
+                if aabb_overlaps_raw(
+                    bomb.x - BOMB_W * 0.5, bomb.y - BOMB_H * 0.5, BOMB_W, BOMB_H,
+                    bx, by, SHIELD_BLOCK, SHIELD_BLOCK,
                 ):
                     shield.discard(block)
                     return True
@@ -489,7 +492,10 @@ class SpaceInvadersScene:
                 self.ufo_active = False
                 self.ufo_timer = self.rng.uniform(UFO_INTERVAL_MIN, UFO_INTERVAL_MAX)
             for bullet in self.bullets[:]:
-                if abs(bullet.x - self.ufo_x) < UFO_W * 0.5 and abs(bullet.y - UFO_Y) < UFO_H * 0.5:
+                if aabb_overlaps_raw(
+                    bullet.x - BULLET_W * 0.5, bullet.y - BULLET_H * 0.5, BULLET_W, BULLET_H,
+                    self.ufo_x - UFO_W * 0.5, UFO_Y - UFO_H * 0.5, UFO_W, UFO_H,
+                ):
                     ufo_points = self.rng.choice([50, 100, 150, 300])
                     self.score += ufo_points
                     self.ufo_active = False
@@ -602,12 +608,21 @@ class SpaceInvadersScene:
             )
 
     def _render_hud(self, draw: DrawList) -> None:
-        draw.text(draw.width * 0.5, 906, "SPACE INVADERS", scale=3, color=TEXT_LIGHT, centered=True)
-        draw.text(30, 864, f"SCORE {self.score:05d}", scale=2, color=GOOD)
-        best_text = f"BEST {self.best_score:05d}"
-        best_width = draw.measure_text(best_text, scale=2)
-        draw.text(draw.width - 30 - best_width, 864, best_text, scale=2, color=ACCENT)
-        draw.text(draw.width * 0.5, 864, f"WAVE {self.wave}", scale=2, color=TEXT_MUTED, centered=True)
+        draw_score_hud(
+            draw,
+            title="SPACE INVADERS",
+            title_y=906.0,
+            score=self.score,
+            best_score=self.best_score,
+            score_y=864.0,
+            score_format="05d",
+            score_label="SCORE",
+            best_label="BEST",
+            margin_x=30.0,
+            extra_text=f"WAVE {self.wave}",
+            extra_y=864.0,
+            extra_color=TEXT_MUTED,
+        )
 
         lx = 30.0
         for i in range(self.lives):
@@ -628,10 +643,15 @@ class SpaceInvadersScene:
         )
 
     def _render_overlay(self, draw: DrawList, title: str, subtitle: str) -> None:
-        draw.quad(0, 0, draw.width, draw.height, (0, 0, 0, 0.6), world=False)
-        draw.text(draw.width * 0.5, 500, title, scale=4, color=TEXT_LIGHT, centered=True)
-        draw.text(draw.width * 0.5, 456, f"SCORE  {self.score:05d}", scale=3, color=ACCENT, centered=True)
-        draw.text(draw.width * 0.5, 416, subtitle, scale=1.5, color=TEXT_MUTED, centered=True)
+        draw_overlay_panel(
+            draw,
+            title=title,
+            title_y=500.0,
+            subtitle=subtitle,
+            subtitle_y=416.0,
+            score_line=f"SCORE  {self.score:05d}",
+            score_y=456.0,
+        )
 
     # -----------------------------------------------------------------------
     # Persistence

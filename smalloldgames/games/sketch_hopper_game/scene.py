@@ -4,6 +4,7 @@ import random
 from collections.abc import Callable
 
 from smalloldgames.engine import (
+    Camera,
     ComponentListProxy,
     GameAction,
     InputState,
@@ -176,6 +177,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
             height=self.player_height,
             velocity_y=self.jump_velocity,
         )
+        self.camera = Camera(follow_offset=self.camera_follow_offset, shake_decay=self.shake_decay)
         self.camera_y = 0.0
         self.score = 0
         self.game_over = False
