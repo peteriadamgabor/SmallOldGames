@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import math
 
+from smalloldgames.engine.collision import aabb_overlaps_raw
+from smalloldgames.engine.physics import wrap_x
+
 from .shared import BlackHole, Monster, Pickup, Projectile
 
 
@@ -9,7 +12,7 @@ class CollisionSystem:
     def _handle_pickups(self) -> None:
         consumed_entities: list[int] = []
         for entity_id, pickup in self.dynamic_world.components(Pickup).items():
-            if self._intersects(
+            if aabb_overlaps_raw(
                 self.player.x,
                 self.player.y,
                 self.player.width,
@@ -80,7 +83,7 @@ class CollisionSystem:
                     )
                     player_cx = hole_cx + away_x * escape_distance
                     player_cy = hole_cy + away_y * escape_distance
-                    self.player.x = (player_cx - self.player.width * 0.5) % self.world_width
+                    self.player.x = wrap_x(player_cx - self.player.width * 0.5, self.world_width)
                     self.player.y = player_cy - self.player.height * 0.5
                     continue
                 self.game_over = True
@@ -88,14 +91,14 @@ class CollisionSystem:
             if distance <= 0.0 or distance >= self.black_hole_pull_radius:
                 continue
             pull = (1.0 - distance / self.black_hole_pull_radius) * self.black_hole_pull_strength
-            self.player.x = (self.player.x + (dx / distance) * pull * dt) % self.world_width
+            self.player.x = wrap_x(self.player.x + (dx / distance) * pull * dt, self.world_width)
             self.player.y += (dy / distance) * pull * dt * 0.75
             player_cx = self.player.x + self.player.width * 0.5
             player_cy = self.player.y + self.player.height * 0.5
 
     def _handle_monster_collisions(self) -> None:
         for entity_id, monster in self.dynamic_world.components(Monster).items():
-            if self._intersects(
+            if aabb_overlaps_raw(
                 self.player.x,
                 self.player.y,
                 self.player.width,
