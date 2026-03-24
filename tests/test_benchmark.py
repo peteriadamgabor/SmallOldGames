@@ -60,8 +60,8 @@ class BenchmarkTests(unittest.TestCase):
             self.assertIsNotNone(scene.saved_results_path)
             report = json.loads(scene.saved_results_path.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "completed")
-            self.assertEqual(report["stage_count"], 4)
-            self.assertEqual(len(report["stages"]), 4)
+            self.assertEqual(report["stage_count"], 5)
+            self.assertEqual(len(report["stages"]), 5)
             self.assertGreater(report["overall"]["avg_gpu_frame_ms"], 0.0)
             self.assertTrue(any("saved results" in line for line in printed))
 

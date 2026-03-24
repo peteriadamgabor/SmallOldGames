@@ -11,6 +11,7 @@ from smalloldgames.assets import COMBINED_ATLAS
 from smalloldgames.data.benchmark_results import save_benchmark_result
 from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, Transition
 from smalloldgames.engine.debug_overlay import FrameProfile
+from smalloldgames.engine.particles import EmitterConfig, ParticleEmitter
 from smalloldgames.menus.common import ACCENT, GOOD, TEXT_LIGHT, TEXT_MUTED, draw_menu_background
 from smalloldgames.rendering.primitives import DrawList
 
@@ -29,6 +30,8 @@ class BenchmarkStageSpec:
     sprite_count: int
     text_rows: int
     duration_seconds: float
+    emitter_count: int = 0
+    particles_per_emitter: int = 32
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,6 +103,8 @@ class BenchmarkScene:
         self.saved_archive_path: Path | None = None
         self.report: dict | None = None
         self.quit_requested = False
+        self._emitters: list[ParticleEmitter] = []
+        self._last_emitter_stage: int = -1
         self.printer(f"[benchmark] starting run with {len(self.stages)} stages")
 
     def update(self, dt: float, inputs: InputState) -> SceneResult:
@@ -116,6 +121,7 @@ class BenchmarkScene:
 
         self.animation_time += dt
         self.stage_elapsed += dt
+        self._tick_particles(dt)
         if self.stage_elapsed >= self._current_stage().duration_seconds:
             self._complete_stage()
         return None
@@ -186,6 +192,40 @@ class BenchmarkScene:
             x = 42.0 + (row % 3) * 150.0
             y = 154.0 + ((row * 24.0 + self.animation_time * 12.0) % 520.0)
             draw.text(x, y, line, scale=2, color=TEXT_LIGHT if row % 2 == 0 else TEXT_MUTED)
+
+        for emitter in self._emitters:
+            emitter.render(draw, world=False)
+
+    def _tick_particles(self, dt: float) -> None:
+        stage = self._current_stage()
+        # Rebuild emitters when stage changes
+        if self._last_emitter_stage != self.stage_index:
+            self._last_emitter_stage = self.stage_index
+            self._emitters = []
+            for i in range(stage.emitter_count):
+                cfg = EmitterConfig(
+                    rate=float(stage.particles_per_emitter) * 2.0,
+                    life_min=0.3,
+                    life_max=0.7,
+                    speed_min=30.0,
+                    speed_max=80.0,
+                    angle_min=0.0,
+                    angle_max=math.tau,
+                    size_min=2.0,
+                    size_max=5.0,
+                    color_start=_quad_color(i),
+                    color_end=(_quad_color(i)[0], _quad_color(i)[1], _quad_color(i)[2], 0.0),
+                    gravity=-40.0,
+                    max_particles=stage.particles_per_emitter,
+                )
+                x = 40.0 + (i * 73.0) % 460.0
+                y = 200.0 + (i * 97.0) % 480.0
+                self._emitters.append(ParticleEmitter(x=x, y=y, config=cfg))
+
+        for emitter in self._emitters:
+            # Move emitters around for visual variety
+            emitter.x = 40.0 + ((emitter.x - 40.0 + dt * 30.0) % 460.0)
+            emitter.tick(dt)
 
     def _render_summary(self, draw: DrawList) -> None:
         draw.quad(30.0, 190.0, 480.0, 606.0, (0.05, 0.08, 0.14, 0.82), world=False)
@@ -285,9 +325,15 @@ class BenchmarkScene:
 def _default_stages(stage_duration_seconds: float) -> tuple[BenchmarkStageSpec, ...]:
     return (
         BenchmarkStageSpec("BASELINE", "LIGHT QUADS AND SPRITES", 18, 12, 4, stage_duration_seconds),
-        BenchmarkStageSpec("ACTIVE", "MID-WEIGHT FILL AND TEXT", 72, 48, 10, stage_duration_seconds),
-        BenchmarkStageSpec("HEAVY", "DENSE UI AND SPRITE CHURN", 144, 96, 16, stage_duration_seconds),
-        BenchmarkStageSpec("OVERDRIVE", "MAXED DRAW LIST PRESSURE", 240, 148, 22, stage_duration_seconds),
+        BenchmarkStageSpec("ACTIVE", "MID-WEIGHT FILL AND TEXT", 72, 48, 10, stage_duration_seconds, emitter_count=4),
+        BenchmarkStageSpec("HEAVY", "DENSE UI AND SPRITE CHURN", 144, 96, 16, stage_duration_seconds, emitter_count=12),
+        BenchmarkStageSpec(
+            "OVERDRIVE", "MAXED DRAW LIST PRESSURE", 240, 148, 22, stage_duration_seconds, emitter_count=24,
+        ),
+        BenchmarkStageSpec(
+            "PARTICLES", "PARTICLE SYSTEM STRESS TEST", 36, 24, 4, stage_duration_seconds,
+            emitter_count=48, particles_per_emitter=64,
+        ),
     )
 
 
