@@ -8,6 +8,7 @@ from smalloldgames.engine import (
     ComponentListProxy,
     GameAction,
     InputState,
+    ParticleEmitter,
     Scene,
     SceneContext,
     SceneResult,
@@ -213,6 +214,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         self.boots_charges_left = 0
         self.score_saved = False
         self.latest_rank = None
+        self._particle_emitters: list[ParticleEmitter] = []
         self.paused = False
         self.pause_page = "settings"
         self.confirm_reset_defaults = False
@@ -278,6 +280,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         self._trim_black_holes()
         self._trim_monsters()
         self._trim_projectiles()
+        self._tick_particles(dt)
         self.score = max(self.score, int(self.camera_y))
         self.best_score = max(self.best_score, self.score)
         self._update_theme_progression()
@@ -309,6 +312,7 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         self._render_monsters(draw)
         self._render_projectiles(draw)
         self._render_impacts(draw)
+        self._render_particles(draw)
         self._render_player(draw)
         self._render_hud(draw)
         self._render_feedback(draw)
