@@ -8,6 +8,21 @@ from smalloldgames.rendering.primitives import Color, DrawList
 _SCRIM: Color = (0.0, 0.0, 0.0, 0.6)
 
 
+def draw_gradient_background(
+    draw: DrawList,
+    *,
+    bottom: Color = (0.08, 0.09, 0.16, 1.0),
+    top: Color = (0.18, 0.25, 0.42, 1.0),
+) -> None:
+    """Full-screen vertical gradient used as scene background."""
+    draw.gradient_quad(
+        0, 0, draw.width, draw.height,
+        bottom_left=bottom, bottom_right=bottom,
+        top_right=top, top_left=top,
+        world=False,
+    )
+
+
 def draw_fullscreen_scrim(draw: DrawList, *, alpha: float = 0.6) -> None:
     """Dark overlay behind pause / game-over panels."""
     draw.quad(0, 0, draw.width, draw.height, (0.0, 0.0, 0.0, alpha), world=False)

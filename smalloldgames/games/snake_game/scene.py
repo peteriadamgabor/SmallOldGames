@@ -3,19 +3,19 @@ from __future__ import annotations
 import random
 from collections.abc import Callable
 
-from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion, Transition
-from smalloldgames.engine.ui import draw_overlay_panel, draw_score_hud
-from smalloldgames.menus.common import (
-    BG_BOTTOM,
-    BG_TOP,
-)
-from smalloldgames.menus.components import BASE_PANEL, draw_button, draw_panel
+from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion
+from smalloldgames.engine.game_state import FLOW_CONTINUE, GameFlowMixin
+from smalloldgames.engine.persistence import PersistenceMixin
+from smalloldgames.engine.touch import TouchButton, build_touch_regions, render_touch_buttons
+from smalloldgames.engine.ui import draw_gradient_background, draw_overlay_panel, draw_score_hud
+from smalloldgames.menus.components import BASE_PANEL, draw_panel
 from smalloldgames.rendering.primitives import DrawList
 
 from .assets import SNAKE_ATLAS
 
 
-class SnakeScene:
+class SnakeScene(GameFlowMixin, PersistenceMixin):
+    _game_name = "snake"
     grid_size = 20
     cell_size = 24
     grid_offset_x = 30
@@ -51,28 +51,9 @@ class SnakeScene:
         self.score_saved = False
 
     def update(self, dt: float, inputs: InputState) -> SceneResult:
-        if inputs.action_pressed(GameAction.BACK):
-            return Transition(self.exit_scene_factory())
-        if inputs.action_pressed(GameAction.PAUSE):
-            self.paused = not self.paused
-            return None
-        if inputs.action_pressed(GameAction.RESTART):
-            self.reset()
-            return None
-
-        if self.game_over:
-            if inputs.action_pressed(GameAction.CONFIRM) or (
-                inputs.pointer_pressed and inputs.pointer_in_rect(100, 300, 340, 100)
-            ):
-                self.reset()
-            return None
-
-        if self.paused:
-            if inputs.action_pressed(GameAction.CONFIRM) or (
-                inputs.pointer_pressed and inputs.pointer_in_rect(100, 300, 340, 100)
-            ):
-                self.paused = False
-            return None
+        result = self._handle_game_flow(inputs)
+        if result is not FLOW_CONTINUE:
+            return result
 
         self._handle_input(inputs)
 
@@ -84,18 +65,7 @@ class SnakeScene:
         return None
 
     def render(self, draw: DrawList) -> None:
-        # Background
-        draw.gradient_quad(
-            0,
-            0,
-            draw.width,
-            draw.height,
-            bottom_left=BG_BOTTOM,
-            bottom_right=BG_BOTTOM,
-            top_right=BG_TOP,
-            top_left=BG_TOP,
-            world=False,
-        )
+        draw_gradient_background(draw)
 
         # Grid area
         draw_panel(
@@ -181,53 +151,21 @@ class SnakeScene:
 
     def _trigger_game_over(self) -> None:
         self.game_over = True
-        if self.audio:
-            self.audio.play("hit")
+        self._play_sound("hit")
         self._finalize_score()
 
-    def _finalize_score(self) -> None:
-        if self.score_saved or self.score_repository is None:
-            return
-        self.score_repository.record_score("snake", self.score)
-        self.score_saved = True
-        self.best_score = self._load_best_score()
-
-    def _load_best_score(self) -> int:
-        if self.score_repository is None:
-            return 0
-        return self.score_repository.best_score("snake")
-
-    def _load_player_name(self) -> str:
-        if self.score_repository is None:
-            return "PLAYER"
-        return self.score_repository.get_player_name()
-
-    def _load_sound_enabled(self) -> bool:
-        if self.score_repository is None:
-            return True
-        return self.score_repository.get_sound_enabled()
-
-    def _load_touch_controls_enabled(self) -> bool:
-        if self.score_repository is None:
-            return True
-        return self.score_repository.get_touch_controls_enabled()
+    _TOUCH_LAYOUT = (
+        TouchButton(210, 140, 120, 80, "UP", frozenset({GameAction.NAV_UP})),
+        TouchButton(210, 0, 120, 80, "DOWN", frozenset({GameAction.NAV_DOWN})),
+        TouchButton(100, 70, 110, 80, "LEFT", frozenset({GameAction.NAV_LEFT})),
+        TouchButton(330, 70, 110, 80, "RIGHT", frozenset({GameAction.NAV_RIGHT})),
+    )
 
     def _render_touch_controls(self, draw: DrawList) -> None:
-        # D-pad style touch hints
-        draw_button(draw, x=210, y=140, width=120, height=80, label="UP", label_scale=2)
-        draw_button(draw, x=210, y=0, width=120, height=80, label="DOWN", label_scale=2)
-        draw_button(draw, x=100, y=70, width=110, height=80, label="LEFT", label_scale=2)
-        draw_button(draw, x=330, y=70, width=110, height=80, label="RIGHT", label_scale=2)
+        render_touch_buttons(draw, self._TOUCH_LAYOUT)
 
     def touch_regions(self) -> tuple[TouchRegion, ...]:
-        if not self.touch_controls_enabled:
-            return ()
-        return (
-            TouchRegion(210, 140, 120, 80, frozenset({GameAction.NAV_UP})),
-            TouchRegion(210, 0, 120, 80, frozenset({GameAction.NAV_DOWN})),
-            TouchRegion(100, 70, 110, 80, frozenset({GameAction.NAV_LEFT})),
-            TouchRegion(330, 70, 110, 80, frozenset({GameAction.NAV_RIGHT})),
-        )
+        return build_touch_regions(self._TOUCH_LAYOUT, enabled=self.touch_controls_enabled)
 
     @staticmethod
     def music_track() -> str | None:

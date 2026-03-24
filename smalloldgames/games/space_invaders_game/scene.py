@@ -4,16 +4,14 @@ import random
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion, Transition
+from smalloldgames.engine import GameAction, InputState, Scene, SceneContext, SceneResult, TouchRegion
 from smalloldgames.engine.collision import aabb_overlaps_raw
+from smalloldgames.engine.game_state import FLOW_CONTINUE, GameFlowMixin
+from smalloldgames.engine.persistence import PersistenceMixin
 from smalloldgames.engine.physics import clamp
-from smalloldgames.engine.ui import draw_overlay_panel, draw_score_hud
-from smalloldgames.menus.common import (
-    BG_BOTTOM,
-    BG_TOP,
-    TEXT_MUTED,
-)
-from smalloldgames.menus.components import draw_button
+from smalloldgames.engine.touch import TouchButton, render_touch_buttons
+from smalloldgames.engine.ui import draw_gradient_background, draw_overlay_panel, draw_score_hud
+from smalloldgames.menus.common import TEXT_MUTED
 from smalloldgames.rendering.primitives import DrawList
 
 from .assets import SPACE_INVADERS_ATLAS
@@ -161,7 +159,8 @@ class Bomb:
 # ---------------------------------------------------------------------------
 # Scene
 # ---------------------------------------------------------------------------
-class SpaceInvadersScene:
+class SpaceInvadersScene(GameFlowMixin, PersistenceMixin):
+    _game_name = "space_invaders"
     def __init__(
         self,
         on_exit: Callable[[], Scene],
@@ -239,31 +238,9 @@ class SpaceInvadersScene:
     # Scene protocol
     # -----------------------------------------------------------------------
     def update(self, dt: float, inputs: InputState) -> SceneResult:
-        if inputs.action_pressed(GameAction.BACK):
-            return Transition(self.exit_scene_factory())
-
-        if inputs.action_pressed(GameAction.PAUSE):
-            if not self.game_over:
-                self.paused = not self.paused
-            return None
-
-        if self.game_over:
-            if (
-                inputs.action_pressed(GameAction.RESTART)
-                or inputs.action_pressed(GameAction.CONFIRM)
-                or (
-                    self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80)
-                )
-            ):
-                self.reset()
-            return None
-
-        if self.paused:
-            if inputs.action_pressed(GameAction.CONFIRM) or (
-                self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80)
-            ):
-                self.paused = False
-            return None
+        result = self._handle_game_flow(inputs)
+        if result is not FLOW_CONTINUE:
+            return result
 
         self._update_player(dt, inputs)
         self._update_bullets(dt)
@@ -526,17 +503,7 @@ class SpaceInvadersScene:
     # Rendering
     # -----------------------------------------------------------------------
     def _render_background(self, draw: DrawList) -> None:
-        draw.gradient_quad(
-            0,
-            0,
-            draw.width,
-            draw.height,
-            bottom_left=BG_BOTTOM,
-            bottom_right=BG_BOTTOM,
-            top_right=BG_TOP,
-            top_left=BG_TOP,
-            world=False,
-        )
+        draw_gradient_background(draw)
 
     def _render_shields(self, draw: DrawList) -> None:
         for i, shield in enumerate(self.shields):
@@ -628,10 +595,30 @@ class SpaceInvadersScene:
         for i in range(self.lives):
             draw.sprite(lx + i * 32, 820, CANNON_SPRITE, width=24.0, height=16.0, world=False)
 
+    def _on_pause_input(self, inputs: InputState) -> SceneResult:
+        if inputs.action_pressed(GameAction.CONFIRM) or (
+            self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80)
+        ):
+            self.paused = False
+        return None
+
+    def _on_game_over_input(self, inputs: InputState) -> SceneResult:
+        if (
+            inputs.action_pressed(GameAction.CONFIRM)
+            or inputs.action_pressed(GameAction.RESTART)
+            or (self.touch_controls_enabled and inputs.pointer_pressed and inputs.pointer_in_rect(120, 310, 300, 80))
+        ):
+            self.reset()
+        return None
+
+    _TOUCH_VISUALS = (
+        TouchButton(10, 40, 110, 100, "LEFT", frozenset({GameAction.MOVE_LEFT})),
+        TouchButton(420, 40, 110, 100, "RIGHT", frozenset({GameAction.MOVE_RIGHT})),
+        TouchButton(190, 40, 160, 100, "FIRE", frozenset({GameAction.FIRE}), label_scale=3),
+    )
+
     def _render_touch_controls(self, draw: DrawList) -> None:
-        draw_button(draw, x=10, y=40, width=110, height=100, label="LEFT", label_scale=2)
-        draw_button(draw, x=420, y=40, width=110, height=100, label="RIGHT", label_scale=2)
-        draw_button(draw, x=190, y=40, width=160, height=100, label="FIRE", label_scale=3)
+        render_touch_buttons(draw, self._TOUCH_VISUALS)
 
     def touch_regions(self) -> tuple[TouchRegion, ...]:
         if not self.touch_controls_enabled or self.game_over or self.paused:
@@ -653,27 +640,3 @@ class SpaceInvadersScene:
             score_y=456.0,
         )
 
-    # -----------------------------------------------------------------------
-    # Persistence
-    # -----------------------------------------------------------------------
-    def _finalize_score(self) -> None:
-        if self.score_saved or self.score_repository is None:
-            return
-        self.score_repository.record_score("space_invaders", self.score)
-        self.score_saved = True
-        self.best_score = self._load_best_score()
-
-    def _load_best_score(self) -> int:
-        if self.score_repository is None:
-            return 0
-        return self.score_repository.best_score("space_invaders")
-
-    def _load_player_name(self) -> str:
-        if self.score_repository is None:
-            return "PLAYER"
-        return self.score_repository.get_player_name()
-
-    def _load_touch_controls_enabled(self) -> bool:
-        if self.score_repository is None:
-            return True
-        return self.score_repository.get_touch_controls_enabled()

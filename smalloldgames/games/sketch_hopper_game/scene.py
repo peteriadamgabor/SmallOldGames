@@ -24,6 +24,7 @@ from .ui import SketchHopperUIMixin
 
 
 class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHopperRenderingMixin):
+    _game_name = "sketch_hopper"
     world_width = 540.0
     world_height = 960.0
     player_width = 58.0
