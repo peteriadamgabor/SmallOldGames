@@ -11,6 +11,9 @@ from vulkan import (
     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
     VK_QUEUE_GRAPHICS_BIT,
+    VK_SAMPLE_COUNT_1_BIT,
+    VK_SAMPLE_COUNT_2_BIT,
+    VK_SAMPLE_COUNT_4_BIT,
     VK_SHARING_MODE_EXCLUSIVE,
     VK_SUCCESS,
     VkApplicationInfo,
@@ -48,6 +51,16 @@ from vulkan import (
 
 from .constants import MAX_VERTEX_BYTES
 from .types import QueueFamilies
+
+
+def _max_usable_sample_count(properties) -> int:
+    """Return the highest MSAA sample count supported, capped at 4x."""
+    counts = properties.limits.framebufferColorSampleCounts
+    if counts & VK_SAMPLE_COUNT_4_BIT:
+        return VK_SAMPLE_COUNT_4_BIT
+    if counts & VK_SAMPLE_COUNT_2_BIT:
+        return VK_SAMPLE_COUNT_2_BIT
+    return VK_SAMPLE_COUNT_1_BIT
 
 
 def find_memory_type(renderer: Any, type_filter: int, properties: int) -> int:
@@ -175,6 +188,7 @@ class VulkanDevice:
             properties = vkGetPhysicalDeviceProperties(physical_device)
             self.renderer.gpu_timestamp_period_ns = float(properties.limits.timestampPeriod)
             self.renderer.gpu_timing_supported = self.renderer.gpu_timestamp_period_ns > 0.0
+            self.renderer.msaa_samples = _max_usable_sample_count(properties)
             return
         raise RuntimeError("No Vulkan device with graphics and presentation support was found.")
 

@@ -8,6 +8,7 @@ from vulkan import (
     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
     VK_QUERY_RESULT_64_BIT,
     VK_QUERY_RESULT_WAIT_BIT,
+    VK_SAMPLE_COUNT_1_BIT,
     VK_SUCCESS,
     VK_TRUE,
     VkPresentInfoKHR,
@@ -86,6 +87,10 @@ class VulkanRenderer:
         self.texture_memory = None
         self.texture_view = None
         self.texture_sampler = None
+        self.msaa_samples = VK_SAMPLE_COUNT_1_BIT
+        self.msaa_image = None
+        self.msaa_memory = None
+        self.msaa_view = None
         self.offscreen_image = None
         self.offscreen_memory = None
         self.offscreen_view = None

@@ -214,25 +214,60 @@ class VulkanPipeline:
         vkEndCommandBuffer(command_buffer)
 
     def _create_scene_render_pass(self) -> None:
-        attachment = VkAttachmentDescription(
-            format=self.renderer.swapchain_format,
-            samples=VK_SAMPLE_COUNT_1_BIT,
-            loadOp=VK_ATTACHMENT_LOAD_OP_CLEAR,
-            storeOp=VK_ATTACHMENT_STORE_OP_STORE,
-            stencilLoadOp=VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            stencilStoreOp=VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
-            finalLayout=VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        )
-        color_attachment_ref = VkAttachmentReference(
-            attachment=0,
-            layout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        )
-        subpass = VkSubpassDescription(
-            pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS,
-            colorAttachmentCount=1,
-            pColorAttachments=[color_attachment_ref],
-        )
+        msaa = self.renderer.msaa_samples
+        use_msaa = msaa != VK_SAMPLE_COUNT_1_BIT
+
+        if use_msaa:
+            # Attachment 0: MSAA color (multi-sample, not stored directly)
+            msaa_attachment = VkAttachmentDescription(
+                format=self.renderer.swapchain_format,
+                samples=msaa,
+                loadOp=VK_ATTACHMENT_LOAD_OP_CLEAR,
+                storeOp=VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                stencilLoadOp=VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                stencilStoreOp=VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
+                finalLayout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            )
+            # Attachment 1: Resolve target (single-sample, read by post-process)
+            resolve_attachment = VkAttachmentDescription(
+                format=self.renderer.swapchain_format,
+                samples=VK_SAMPLE_COUNT_1_BIT,
+                loadOp=VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                storeOp=VK_ATTACHMENT_STORE_OP_STORE,
+                stencilLoadOp=VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                stencilStoreOp=VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
+                finalLayout=VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            )
+            color_ref = VkAttachmentReference(attachment=0, layout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            resolve_ref = VkAttachmentReference(attachment=1, layout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            subpass = VkSubpassDescription(
+                pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS,
+                colorAttachmentCount=1,
+                pColorAttachments=[color_ref],
+                pResolveAttachments=[resolve_ref],
+            )
+            attachments = [msaa_attachment, resolve_attachment]
+        else:
+            attachment = VkAttachmentDescription(
+                format=self.renderer.swapchain_format,
+                samples=VK_SAMPLE_COUNT_1_BIT,
+                loadOp=VK_ATTACHMENT_LOAD_OP_CLEAR,
+                storeOp=VK_ATTACHMENT_STORE_OP_STORE,
+                stencilLoadOp=VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                stencilStoreOp=VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
+                finalLayout=VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            )
+            color_ref = VkAttachmentReference(attachment=0, layout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            subpass = VkSubpassDescription(
+                pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS,
+                colorAttachmentCount=1,
+                pColorAttachments=[color_ref],
+            )
+            attachments = [attachment]
+
         dependency = VkSubpassDependency(
             srcSubpass=VK_SUBPASS_EXTERNAL,
             dstSubpass=0,
@@ -241,8 +276,8 @@ class VulkanPipeline:
             dstAccessMask=VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         )
         create_info = VkRenderPassCreateInfo(
-            attachmentCount=1,
-            pAttachments=[attachment],
+            attachmentCount=len(attachments),
+            pAttachments=attachments,
             subpassCount=1,
             pSubpasses=[subpass],
             dependencyCount=1,
@@ -351,7 +386,7 @@ class VulkanPipeline:
                 lineWidth=1.0,
             )
             multisampling = VkPipelineMultisampleStateCreateInfo(
-                rasterizationSamples=VK_SAMPLE_COUNT_1_BIT,
+                rasterizationSamples=self.renderer.msaa_samples,
                 sampleShadingEnable=False,
             )
             blend_attachment = VkPipelineColorBlendAttachmentState(
