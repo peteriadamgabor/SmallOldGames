@@ -95,7 +95,6 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         self.feedback_timer = 0.0
         self.flash_timer = 0.0
         self.flash_color: Color = (1.0, 1.0, 1.0, 0.0)
-        self.shake_amount = 0.0
         self.theme_index = 0
         self.theme_blend_index = 0
         self.theme_transition_timer = 0.0
@@ -108,6 +107,22 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
     def _apply_config(self) -> None:
         for field_name in self.config.__dataclass_fields__:
             setattr(self, field_name, getattr(self.config, field_name))
+
+    @property
+    def camera_y(self) -> float:
+        return self.camera.y
+
+    @camera_y.setter
+    def camera_y(self, value: float) -> None:
+        self.camera.y = value
+
+    @property
+    def shake_amount(self) -> float:
+        return self.camera.shake_intensity
+
+    @shake_amount.setter
+    def shake_amount(self, value: float) -> None:
+        self.camera.shake_intensity = value
 
     @property
     def dynamic_world(self) -> World:
@@ -179,7 +194,6 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
             velocity_y=self.jump_velocity,
         )
         self.camera = Camera(follow_offset=self.camera_follow_offset, shake_decay=self.shake_decay)
-        self.camera_y = 0.0
         self.score = 0
         self.game_over = False
         self.platforms: list[Platform] = []
@@ -205,7 +219,6 @@ class SketchHopperScene(SketchHopperSystemsMixin, SketchHopperUIMixin, SketchHop
         self.feedback_text = ""
         self.feedback_timer = 0.0
         self.flash_timer = 0.0
-        self.shake_amount = 0.0
         self.theme_index = self._theme_index_for_height(0.0)
         self.theme_blend_index = self.theme_index
         self.theme_transition_timer = 0.0
