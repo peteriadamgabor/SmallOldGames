@@ -237,14 +237,14 @@ class PhysicsSystem:
             return
 
     def _tick_camera(self) -> None:
-        self.camera_y = max(self.camera_y, self.player.y - self.world_height * self.camera_follow_offset)
+        self.camera.follow_y(self.player.y)
 
     def _tick_feedback(self, dt: float) -> None:
         self.feedback_timer = max(0.0, self.feedback_timer - dt)
         if self.feedback_timer == 0.0:
             self.feedback_text = ""
         self.flash_timer = max(0.0, self.flash_timer - dt)
-        self.shake_amount = max(0.0, self.shake_amount - self.shake_decay * dt)
+        self.camera.tick(dt)
         self.shield_timer = max(0.0, self.shield_timer - dt)
         self.player_squash_timer = max(0.0, self.player_squash_timer - dt)
         self.player_stretch_timer = max(0.0, self.player_stretch_timer - dt)

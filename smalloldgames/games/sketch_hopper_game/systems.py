@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import math
-
 from smalloldgames.engine.persistence import PersistenceMixin
 
 from .cleanup import CleanupSystem
@@ -74,7 +72,8 @@ class SketchHopperSystemsMixin(SpawnSystem, PhysicsSystem, CollisionSystem, Clea
         self.feedback_timer = self.feedback_message_duration
         self.flash_timer = self.effect_flash_duration
         self.flash_color = color
-        self.shake_amount = max(self.shake_amount, shake)
+        if shake > 0.0:
+            self.camera.add_shake(shake)
 
     def _spawn_impact(self, x: float, y: float, color: Color, *, text: str = "") -> None:
         self._spawn_impact_entity(
@@ -89,9 +88,7 @@ class SketchHopperSystemsMixin(SpawnSystem, PhysicsSystem, CollisionSystem, Clea
         )
 
     def _camera_shake_offset(self) -> float:
-        if self.shake_amount <= 0.0:
-            return 0.0
-        return math.sin(self.feedback_timer * 36.0 + self.score * 0.01) * self.shake_amount
+        return self.camera.offset_y() - self.camera.y
 
     def _consume_shield(self, text: str) -> bool:
         if self.shield_timer <= 0.0:
