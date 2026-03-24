@@ -162,12 +162,16 @@ class VulkanSwapchain:
         )
 
     def _create_framebuffers(self) -> None:
+        if self.renderer.msaa_view is not None:
+            scene_attachments = [self.renderer.msaa_view, self.renderer.offscreen_view]
+        else:
+            scene_attachments = [self.renderer.offscreen_view]
         self.renderer.scene_framebuffer = vkCreateFramebuffer(
             self.renderer.device,
             VkFramebufferCreateInfo(
                 renderPass=self.renderer.scene_render_pass,
-                attachmentCount=1,
-                pAttachments=[self.renderer.offscreen_view],
+                attachmentCount=len(scene_attachments),
+                pAttachments=scene_attachments,
                 width=self.renderer.swapchain_extent.width,
                 height=self.renderer.swapchain_extent.height,
                 layers=1,

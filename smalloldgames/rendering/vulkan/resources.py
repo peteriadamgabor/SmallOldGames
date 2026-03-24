@@ -105,14 +105,24 @@ class VulkanResources:
         self._update_post_descriptor_set()
 
     def destroy_frame_resources(self) -> None:
-        if self.renderer.device is not None and self.renderer.offscreen_view is not None:
-            vkDestroyImageView(self.renderer.device, self.renderer.offscreen_view, None)
+        dev = self.renderer.device
+        if dev is not None and self.renderer.msaa_view is not None:
+            vkDestroyImageView(dev, self.renderer.msaa_view, None)
+            self.renderer.msaa_view = None
+        if dev is not None and self.renderer.msaa_image is not None:
+            vkDestroyImage(dev, self.renderer.msaa_image, None)
+            self.renderer.msaa_image = None
+        if dev is not None and self.renderer.msaa_memory is not None:
+            vkFreeMemory(dev, self.renderer.msaa_memory, None)
+            self.renderer.msaa_memory = None
+        if dev is not None and self.renderer.offscreen_view is not None:
+            vkDestroyImageView(dev, self.renderer.offscreen_view, None)
             self.renderer.offscreen_view = None
-        if self.renderer.device is not None and self.renderer.offscreen_image is not None:
-            vkDestroyImage(self.renderer.device, self.renderer.offscreen_image, None)
+        if dev is not None and self.renderer.offscreen_image is not None:
+            vkDestroyImage(dev, self.renderer.offscreen_image, None)
             self.renderer.offscreen_image = None
-        if self.renderer.device is not None and self.renderer.offscreen_memory is not None:
-            vkFreeMemory(self.renderer.device, self.renderer.offscreen_memory, None)
+        if dev is not None and self.renderer.offscreen_memory is not None:
+            vkFreeMemory(dev, self.renderer.offscreen_memory, None)
             self.renderer.offscreen_memory = None
 
     def close(self) -> None:
@@ -266,14 +276,14 @@ class VulkanResources:
         vkUpdateDescriptorSets(self.renderer.device, 1, [write], 0, None)
 
     def _create_offscreen_resources(self) -> None:
-        image_info = VkImageCreateInfo(
+        extent = self.renderer.swapchain_extent
+        msaa = self.renderer.msaa_samples
+
+        # Resolve target (single-sample) — post-process reads from this
+        resolve_info = VkImageCreateInfo(
             imageType=VK_IMAGE_TYPE_2D,
             format=VK_FORMAT_B8G8R8A8_UNORM,
-            extent=VkExtent3D(
-                width=self.renderer.swapchain_extent.width,
-                height=self.renderer.swapchain_extent.height,
-                depth=1,
-            ),
+            extent=VkExtent3D(width=extent.width, height=extent.height, depth=1),
             mipLevels=1,
             arrayLayers=1,
             samples=VK_SAMPLE_COUNT_1_BIT,
@@ -282,26 +292,53 @@ class VulkanResources:
             sharingMode=VK_SHARING_MODE_EXCLUSIVE,
             initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
         )
-        self.renderer.offscreen_image = vkCreateImage(self.renderer.device, image_info, None)
+        self.renderer.offscreen_image = vkCreateImage(self.renderer.device, resolve_info, None)
         requirements = vkGetImageMemoryRequirements(self.renderer.device, self.renderer.offscreen_image)
         self.renderer.offscreen_memory = vkAllocateMemory(
             self.renderer.device,
             VkMemoryAllocateInfo(
                 allocationSize=requirements.size,
                 memoryTypeIndex=find_memory_type(
-                    self.renderer,
-                    requirements.memoryTypeBits,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                    self.renderer, requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 ),
             ),
             None,
         )
         vkBindImageMemory(self.renderer.device, self.renderer.offscreen_image, self.renderer.offscreen_memory, 0)
         self.renderer.offscreen_view = create_image_view(
-            self.renderer,
-            self.renderer.offscreen_image,
-            VK_FORMAT_B8G8R8A8_UNORM,
+            self.renderer, self.renderer.offscreen_image, VK_FORMAT_B8G8R8A8_UNORM,
         )
+
+        # MSAA color attachment (multi-sample) — only when msaa > 1
+        if msaa != VK_SAMPLE_COUNT_1_BIT:
+            msaa_info = VkImageCreateInfo(
+                imageType=VK_IMAGE_TYPE_2D,
+                format=VK_FORMAT_B8G8R8A8_UNORM,
+                extent=VkExtent3D(width=extent.width, height=extent.height, depth=1),
+                mipLevels=1,
+                arrayLayers=1,
+                samples=msaa,
+                tiling=VK_IMAGE_TILING_OPTIMAL,
+                usage=VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                sharingMode=VK_SHARING_MODE_EXCLUSIVE,
+                initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
+            )
+            self.renderer.msaa_image = vkCreateImage(self.renderer.device, msaa_info, None)
+            msaa_reqs = vkGetImageMemoryRequirements(self.renderer.device, self.renderer.msaa_image)
+            self.renderer.msaa_memory = vkAllocateMemory(
+                self.renderer.device,
+                VkMemoryAllocateInfo(
+                    allocationSize=msaa_reqs.size,
+                    memoryTypeIndex=find_memory_type(
+                        self.renderer, msaa_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                    ),
+                ),
+                None,
+            )
+            vkBindImageMemory(self.renderer.device, self.renderer.msaa_image, self.renderer.msaa_memory, 0)
+            self.renderer.msaa_view = create_image_view(
+                self.renderer, self.renderer.msaa_image, VK_FORMAT_B8G8R8A8_UNORM,
+            )
 
     def _update_post_descriptor_set(self) -> None:
         image_info = VkDescriptorImageInfo(

@@ -1,5 +1,6 @@
 """Shared engine utilities."""
 
+from .animation import Animation, AnimationSet, AnimationState
 from .audio import AudioEngine
 from .camera import Camera
 from .collision import AABB, SpatialHash, aabb_overlaps, aabb_overlaps_raw, covered_cells
@@ -8,6 +9,7 @@ from .ecs import ComponentListProxy, EntityId, System, World, run_systems
 from .game_registry import GameDefinition, GameRegistry, load_game_definition
 from .game_state import FLOW_CONTINUE, GameFlowMixin
 from .input import GameAction, InputState, TouchRegion
+from .particles import EmitterConfig, ParticleEmitter
 from .persistence import PersistenceMixin
 from .physics import apply_gravity, bounce_x, clamp, integrate_velocity, wrap_x
 from .resources import ResourceRegistry
@@ -18,9 +20,13 @@ from .ui import draw_fullscreen_scrim, draw_gradient_background, draw_overlay_pa
 __all__ = [
     "AABB",
     "FLOW_CONTINUE",
+    "Animation",
+    "AnimationSet",
+    "AnimationState",
     "AudioEngine",
     "Camera",
     "ComponentListProxy",
+    "EmitterConfig",
     "EntityId",
     "GameAction",
     "GameDefinition",
@@ -28,6 +34,7 @@ __all__ = [
     "GameRegistry",
     "InputState",
     "Lifetime",
+    "ParticleEmitter",
     "PersistenceMixin",
     "Pop",
     "Position",
