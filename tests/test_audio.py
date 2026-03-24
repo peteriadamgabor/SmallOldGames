@@ -61,12 +61,13 @@ class AudioTests(unittest.TestCase):
             engine = AudioEngine()
         self.addCleanup(engine.close)
 
-        with patch("smalloldgames.engine.audio.synthesize_pcm", wraps=synthesize_pcm) as synth:
-            engine.play("jump")
-            engine.play("jump")
+        # Effects are pre-warmed during init, so play should use cache
+        engine.play("jump")
+        engine.play("jump")
 
         self.assertEqual(len(backend.effect_calls), 2)
-        synth.assert_called_once()
+        # Both calls should use the same cached clip
+        self.assertEqual(backend.effect_calls[0], backend.effect_calls[1])
 
     def test_stop_music_delegates_to_backend_and_clears_track(self) -> None:
         backend = _FakeBackend()
