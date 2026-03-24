@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import math
 
+from smalloldgames.engine.persistence import PersistenceMixin
+
 from .cleanup import CleanupSystem
 from .collision import CollisionSystem
 from .physics import PhysicsSystem
@@ -9,7 +11,7 @@ from .shared import THEMES, BlackHole, Cloud, Color, ImpactEffect, Monster, Pick
 from .spawn import SpawnSystem
 
 
-class SketchHopperSystemsMixin(SpawnSystem, PhysicsSystem, CollisionSystem, CleanupSystem):
+class SketchHopperSystemsMixin(SpawnSystem, PhysicsSystem, CollisionSystem, CleanupSystem, PersistenceMixin):
     # --- ECS helpers (used by spawn, physics, collision, cleanup) ---
 
     def _cloud_components(self) -> list[Cloud]:
@@ -50,39 +52,7 @@ class SketchHopperSystemsMixin(SpawnSystem, PhysicsSystem, CollisionSystem, Clea
     def _difficulty_at_height(self, height: float) -> float:
         return min(max(height / self.difficulty_ramp_height, 0.0), 1.0)
 
-    # --- Persistence ---
-
-    def _load_best_score(self) -> int:
-        if self.score_repository is None:
-            return 0
-        return self.score_repository.best_score("sketch_hopper")
-
-    def _load_player_name(self) -> str:
-        if self.score_repository is None:
-            return "PLAYER"
-        return self.score_repository.get_player_name()
-
-    def _load_sound_enabled(self) -> bool:
-        if self.score_repository is None:
-            return True
-        return self.score_repository.get_sound_enabled()
-
-    def _load_touch_controls_enabled(self) -> bool:
-        if self.score_repository is None:
-            return True
-        return self.score_repository.get_touch_controls_enabled()
-
-    def _set_sound_enabled(self, enabled: bool) -> None:
-        self.sound_enabled = enabled
-        if self.audio is not None:
-            self.audio.set_enabled(enabled)
-        if self.score_repository is not None:
-            self.score_repository.set_sound_enabled(enabled)
-
-    def _set_touch_controls_enabled(self, enabled: bool) -> None:
-        self.touch_controls_enabled = enabled
-        if self.score_repository is not None:
-            self.score_repository.set_touch_controls_enabled(enabled)
+    # --- Score (extends PersistenceMixin) ---
 
     def _finalize_score(self) -> None:
         if self.score_saved:
@@ -92,14 +62,10 @@ class SketchHopperSystemsMixin(SpawnSystem, PhysicsSystem, CollisionSystem, Clea
         self._play_sound("game_over")
         if self.score_repository is None or self.score <= 0:
             return
-        self.latest_rank = self.score_repository.record_score("sketch_hopper", self.score, player_name=self.player_name)
-        self.best_score = self.score_repository.best_score("sketch_hopper")
-
-    # --- Sound ---
-
-    def _play_sound(self, effect_name: str) -> None:
-        if self.audio is not None:
-            self.audio.play(effect_name)
+        self.latest_rank = self.score_repository.record_score(
+            self._game_name, self.score, player_name=self.player_name,
+        )
+        self.best_score = self.score_repository.best_score(self._game_name)
 
     # --- Feedback & effects ---
 
