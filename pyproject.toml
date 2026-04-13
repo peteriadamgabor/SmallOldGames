@@ -15,7 +15,7 @@ build = [
 ]
 dev = [
     "ruff>=0.9.0",
-    "mypy>=1.14.0",
+    "mypy>=1.20.1",
 ]
 
 [project.scripts]
